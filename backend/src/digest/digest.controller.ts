@@ -23,9 +23,9 @@ export class DigestController {
     return this.digest.sendOnboarding(body?.departmentIds);
   }
 
-  /** Manually trigger the "fill your sheet" reminder to pending departments. */
+  /** Manually trigger the "fill your sheet" reminder to pending departments (attempt 1-4 escalates wording). */
   @Post("remind")
-  remind() {
-    return this.digest.sendReminders();
+  remind(@Body() body: { attempt?: number }) {
+    return this.digest.sendReminders(body?.attempt ?? 1);
   }
 }

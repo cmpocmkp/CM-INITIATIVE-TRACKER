@@ -51,19 +51,52 @@ export class DigestService {
     }
   }
 
-  /** 9:00 AM Pakistan time — remind departments that haven't filled today's sheet. */
+  /**
+   * Escalating reminders (PKT): 9 AM → 1 PM → 4 PM → 5 PM (final).
+   * Each round only reaches departments whose sheet is still pending,
+   * so submitting at any point stops further reminders that day.
+   */
   @Cron("0 9 * * *", { timeZone: "Asia/Karachi" })
-  async scheduledReminders() {
+  remind9am() {
+    return this.runReminder(1);
+  }
+  @Cron("0 13 * * *", { timeZone: "Asia/Karachi" })
+  remind1pm() {
+    return this.runReminder(2);
+  }
+  @Cron("0 16 * * *", { timeZone: "Asia/Karachi" })
+  remind4pm() {
+    return this.runReminder(3);
+  }
+  @Cron("0 17 * * *", { timeZone: "Asia/Karachi" })
+  remind5pm() {
+    return this.runReminder(4);
+  }
+
+  private async runReminder(attempt: number) {
     try {
-      const res = await this.sendReminders();
-      this.logger.log(`Reminders: ${JSON.stringify(res)}`);
+      const res = await this.sendReminders(attempt);
+      this.logger.log(`Reminders (round ${attempt}): ${JSON.stringify(res)}`);
     } catch (e) {
-      this.logger.error(`Reminders failed: ${(e as Error).message}`);
+      this.logger.error(`Reminders round ${attempt} failed: ${(e as Error).message}`);
     }
   }
 
-  /** Departments that haven't submitted anything today get an email and/or WhatsApp reminder. */
-  async sendReminders(): Promise<{ ok: boolean; reason?: string; sent: string[]; whatsapp: string[]; skipped: number }> {
+  /**
+   * Departments that haven't submitted anything today get an email and/or
+   * WhatsApp reminder. `attempt` escalates the wording: 1=9AM, 2=1PM, 3=4PM,
+   * 4=5PM final (warns of being flagged in the evening CM Office digest).
+   */
+  async sendReminders(attempt = 1): Promise<{ ok: boolean; reason?: string; round: number; sent: string[]; whatsapp: string[]; skipped: number }> {
+    const LABELS = ["", "Reminder", "2nd Reminder", "3rd Reminder", "FINAL Reminder"];
+    const label = LABELS[Math.max(1, Math.min(attempt, 4))];
+    const finalLine =
+      attempt >= 4
+        ? " This is the final reminder — departments without today's entry are flagged in this evening's digest to the CM Office."
+        : attempt >= 2
+          ? " Earlier reminder(s) today have not been actioned yet."
+          : "";
+
     const transport = this.transport();
     const d = await this.core.dashboard(SYSTEM_USER);
     const pending = d.compliance.filter((c: any) => c.schemes > 0 && c.updatedToday === 0);
@@ -80,20 +113,20 @@ export class DigestService {
       for (const p of phones) {
         const r = await this.whatsapp.send(
           p.phone as string,
-          `*CM Initiative Tracker*\n\nDear ${p.name},\n\nToday's progress entry for your ${p._count.schemes} priority scheme(s) is pending. Please fill your daily sheet:\n${appUrl}/entry\n\nSign in with your department code *${p.code}*.\n\n— Chief Minister's Policy Office (CMPO)`,
+          `*CM Initiative Tracker — ${label}*\n\nDear ${p.name},\n\nToday's progress entry for your ${p._count.schemes} priority scheme(s) is still pending.${finalLine}\n\nFill your daily sheet:\n${appUrl}/entry\n\nSign in with your department code *${p.code}*.\n\n— Chief Minister's Policy Office (CMPO)`,
         );
         if (r.ok) waSent.push(p.code);
       }
     }
 
-    if (!transport) return { ok: waSent.length > 0, reason: "Gmail credentials not configured", sent: [], whatsapp: waSent, skipped: 0 };
+    if (!transport) return { ok: waSent.length > 0, reason: "Gmail credentials not configured", round: attempt, sent: [], whatsapp: waSent, skipped: 0 };
     const laggards = pending.filter((c: any) => c.email);
 
     for (const dept of laggards) {
       await transport.sendMail({
         from: `CM Initiative Tracker <${process.env.GMAIL_USER}>`,
         to: dept.email as string,
-        subject: `Reminder: Daily progress entry pending — ${dept.code} · ${d.today}`,
+        subject: `${label}: Daily progress entry pending — ${dept.code} · ${d.today}`,
         html: `
 <div style="font-family:Segoe UI,Arial,sans-serif;max-width:560px;margin:0 auto;border:1px solid #e5eaf0;border-radius:12px;overflow:hidden;">
   <div style="background:#0076a9;color:#fff;padding:16px 22px;">
@@ -101,18 +134,18 @@ export class DigestService {
   </div>
   <div style="padding:20px 22px;font-size:14px;color:#1e293b;line-height:1.6;">
     <p>Dear <b>${dept.name}</b>,</p>
-    <p>Today's progress entry for your <b>${dept.schemes} priority scheme(s)</b> has not been submitted yet.
+    <p><b>${label}:</b> today's progress entry for your <b>${dept.schemes} priority scheme(s)</b> is still pending.${finalLine}
     Please fill your daily sheet — it takes a few minutes.</p>
     <p style="text-align:center;margin:22px 0;">
       <a href="${appUrl}/entry" style="background:#0076a9;color:#fff;text-decoration:none;padding:11px 26px;border-radius:8px;font-weight:600;">Fill Today's Sheet</a>
     </p>
-    <p style="font-size:12px;color:#64748b;">Sign in with your department code <b>${dept.code}</b>. This reminder is sent each morning until the day's entry is received.</p>
+    <p style="font-size:12px;color:#64748b;">Sign in with your department code <b>${dept.code}</b>. Reminders go out at 9 AM, 1 PM, 4 PM and 5 PM until the day's entry is received.</p>
   </div>
 </div>`,
       });
       sent.push(dept.code);
     }
-    return { ok: true, sent, whatsapp: waSent, skipped: laggards.length - sent.length };
+    return { ok: true, round: attempt, sent, whatsapp: waSent, skipped: laggards.length - sent.length };
   }
 
   /** One-time onboarding: credentials + how to use — email and/or WhatsApp per department. */
