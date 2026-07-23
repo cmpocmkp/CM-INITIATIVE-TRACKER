@@ -10,6 +10,7 @@ type Draft = {
   machinery: string;
   siteStatus: SiteStatus | "";
   bottlenecks: string;
+  remarks: string;
   fundsReleased: string;
   expenditure: string;
 };
@@ -22,6 +23,7 @@ const emptyDraft = (): Draft => ({
   machinery: "",
   siteStatus: "",
   bottlenecks: "",
+  remarks: "",
   fundsReleased: "",
   expenditure: "",
 });
@@ -36,6 +38,7 @@ function fromUpdate(u: Update | null): Draft {
     machinery: u.machinery?.toString() ?? "",
     siteStatus: u.siteStatus ?? "",
     bottlenecks: u.bottlenecks ?? "",
+    remarks: u.remarks ?? "",
     fundsReleased: u.fundsReleased?.toString() ?? "",
     expenditure: u.expenditure?.toString() ?? "",
   };
@@ -166,6 +169,7 @@ export default function Entry() {
           machinery: d.machinery === "" ? null : Number(d.machinery),
           siteStatus: d.siteStatus === "" ? null : d.siteStatus,
           bottlenecks: d.bottlenecks || null,
+          remarks: d.remarks || null,
           fundsReleased: d.fundsReleased === "" ? null : Number(d.fundsReleased),
           expenditure: d.expenditure === "" ? null : Number(d.expenditure),
         };
@@ -239,7 +243,7 @@ export default function Entry() {
 
       <div className="card overflow-hidden">
         <div className="scroll-thin overflow-x-auto">
-          <table className="w-full border-collapse" style={{ minWidth: 1500 }}>
+          <table className="w-full border-collapse" style={{ minWidth: 1680 }}>
             <thead>
               <tr className="border-b border-slate-200 bg-navy-900 text-white">
                 <th className="sticky left-0 z-10 bg-navy-900 px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider" style={{ minWidth: 300 }}>
@@ -253,6 +257,7 @@ export default function Entry() {
                 <th className="th !text-right !text-white/70">Machinery</th>
                 <th className="th !text-white/70">Site Status</th>
                 <th className="th !text-white/70" style={{ minWidth: 160 }}>Issues / Needs Decision</th>
+                <th className="th !text-white/70" style={{ minWidth: 170 }}>Additional Details</th>
                 <th className="th !text-right !text-white/70">Released (M)</th>
                 <th className="th !text-right !text-white/70">Spent (M)</th>
                 <th className="th !text-center !text-white/70">✓</th>
@@ -344,6 +349,9 @@ export default function Entry() {
                     </td>
                     <td className="border-l border-slate-100 p-0">
                       <input className="cell" value={d.bottlenecks} placeholder="blocker / decision needed" onChange={(e) => set(fr.key, "bottlenecks", e.target.value)} />
+                    </td>
+                    <td className="border-l border-slate-100 p-0">
+                      <input className="cell" value={d.remarks} placeholder="any other details…" onChange={(e) => set(fr.key, "remarks", e.target.value)} />
                     </td>
                     <td className="w-24 border-l border-slate-100 p-0">
                       {fr.entityType === "SCHEME" ? cellNum(fr, "fundsReleased", { placeholder: fr.prev?.fundsReleased?.toString() }) : <div className="cell cursor-not-allowed text-center text-slate-300">—</div>}

@@ -77,6 +77,7 @@ export interface Update {
   machinery: number | null;
   siteStatus: SiteStatus;
   bottlenecks: string | null;
+  remarks: string | null;
   fundsReleased: number | null;
   expenditure: number | null;
   financialProgressPct: number | null;

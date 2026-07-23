@@ -157,6 +157,7 @@ model ProgressUpdate {
   machinery            Int? // machines on site today
   siteStatus           SiteStatus  @default(NOT_STARTED)
   bottlenecks          String? // issues / needs decision
+  remarks              String? // additional details (free text)
   fundsReleased        Float? // Rs. in millions, cumulative (scheme rows)
   expenditure          Float? // Rs. in millions, cumulative (scheme rows)
   financialProgressPct Float? // auto-computed: expenditure / allocation * 100

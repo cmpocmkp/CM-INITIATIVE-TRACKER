@@ -15,6 +15,7 @@ export interface SheetEntryInput {
   machinery?: number | null;
   siteStatus?: SiteStatus | null;
   bottlenecks?: string | null;
+  remarks?: string | null;
   fundsReleased?: number | null;
   expenditure?: number | null;
 }
@@ -426,6 +427,7 @@ export class CoreService {
                 ? ("COMPLETED" as SiteStatus)
                 : undefined,
           bottlenecks: strOrNull(e.bottlenecks),
+          remarks: strOrNull(e.remarks),
           fundsReleased: isScheme ? numOrNull(e.fundsReleased) : null,
           expenditure: spent,
           // Financial % is computed, never typed.
@@ -436,7 +438,7 @@ export class CoreService {
 
         const hasData =
           clean.phase || clean.physicalProgressPct != null || clean.narrative || clean.manpower != null ||
-          clean.machinery != null || clean.siteStatus != null || clean.bottlenecks ||
+          clean.machinery != null || clean.siteStatus != null || clean.bottlenecks || clean.remarks ||
           clean.fundsReleased != null || clean.expenditure != null;
         if (!hasData) continue;
 
@@ -609,7 +611,7 @@ export class CoreService {
     const header = [
       "S.No", "ADP Code", "Scheme", "Sector/Dept", "Initiative", "Lifecycle Stage", "Total Cost (M)", "ADP Allocation (M)",
       "Funds Released (M)", "Expenditure (M)", "Financial % (auto)", "Physical % (rolled up)", "Phase", "Site Status",
-      "Manpower", "Machinery", "Last Report Date", "Issues",
+      "Manpower", "Machinery", "Last Report Date", "Issues", "Additional Details",
     ];
     const lines = [header.join(",")];
     schemes.forEach((s, idx) => {
@@ -634,6 +636,7 @@ export class CoreService {
           u?.machinery ?? "",
           u ? new Date(u.reportDate).toISOString().slice(0, 10) : "",
           csv(u?.bottlenecks ?? ""),
+          csv(u?.remarks ?? ""),
         ].join(","),
       );
     });

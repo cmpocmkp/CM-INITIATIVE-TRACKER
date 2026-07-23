@@ -52,7 +52,8 @@ function HistoryTable({ updates, showMoney }: { updates: Update[]; showMoney: bo
                       <b>⚠</b> {x.bottlenecks}
                     </div>
                   )}
-                  {!x.narrative && !x.bottlenecks && <span className="text-slate-300">—</span>}
+                  {x.remarks && <div className="mt-0.5 italic text-slate-500">{x.remarks}</div>}
+                  {!x.narrative && !x.bottlenecks && !x.remarks && <span className="text-slate-300">—</span>}
                 </td>
                 <td className="td whitespace-nowrap text-[12px] text-slate-500">{x.submittedBy?.username ?? "—"}</td>
               </tr>

@@ -16,19 +16,17 @@
     "@nestjs/schedule": "4.1.1",
     "@nestjs/serve-static": "4.0.2",
     "@prisma/client": "6.2.1",
-    "bcryptjs": "2.4.3",
-    "cookie-parser": "1.4.7",
-    "dotenv": "16.4.5",
-    "nodemailer": "6.9.16",
-    "reflect-metadata": "0.2.2",
-    "rxjs": "7.8.1"
-  },
-  "devDependencies": {
     "@types/bcryptjs": "2.4.6",
     "@types/cookie-parser": "1.4.8",
     "@types/express": "5.0.0",
     "@types/node": "22.10.5",
     "@types/nodemailer": "6.4.17",
+    "bcryptjs": "2.4.3",
+    "cookie-parser": "1.4.7",
+    "dotenv": "16.4.5",
+    "nodemailer": "6.9.16",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.1",
     "typescript": "5.7.3"
   }
 }
