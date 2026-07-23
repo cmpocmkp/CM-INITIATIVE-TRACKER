@@ -59,13 +59,13 @@ export default function Layout() {
   }
 
   const sidebarContent = (isCollapsed: boolean) => (
-    <div className="flex h-full flex-col bg-[#55575c]">
-      <div className={cn("flex items-center border-b border-white/10 py-4", isCollapsed ? "justify-center px-2" : "gap-3 px-5")}>
+    <div className="flex h-full flex-col border-r border-neutral-200 bg-white">
+      <div className={cn("flex items-center border-b border-neutral-100 py-4", isCollapsed ? "justify-center px-2" : "gap-3 px-5")}>
         <Logo size={40} className="rounded-lg" />
         {!isCollapsed && (
           <div className="leading-tight">
-            <div className="text-[13px] font-bold text-white">CM INITIATIVE TRACKER</div>
-            <div className="text-[11px] text-white/50">GoKP</div>
+            <div className="text-[13px] text-neutral-900">CM INITIATIVE TRACKER</div>
+            <div className="text-[11px] text-neutral-400">GoKP</div>
           </div>
         )}
       </div>
@@ -79,9 +79,11 @@ export default function Layout() {
             onClick={() => setOpen(false)}
             className={({ isActive }) =>
               cn(
-                "flex items-center rounded-lg text-[13px] font-medium transition",
+                "flex items-center rounded-lg text-[13px] transition",
                 isCollapsed ? "justify-center px-0 py-3" : "gap-3 px-3 py-2.5",
-                isActive ? "bg-white text-navy-900" : "text-white/70 hover:bg-white/10 hover:text-white",
+                isActive
+                  ? "bg-neutral-100 font-medium text-neutral-900"
+                  : "text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900",
               )
             }
           >
@@ -94,7 +96,7 @@ export default function Layout() {
       <button
         onClick={toggleCollapse}
         title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        className="hidden items-center justify-center gap-2 border-t border-white/10 py-3 text-[12px] font-medium text-white/60 transition hover:bg-white/10 hover:text-white lg:flex"
+        className="hidden items-center justify-center gap-2 border-t border-neutral-100 py-3 text-[12px] text-neutral-400 transition hover:bg-neutral-50 hover:text-neutral-900 lg:flex"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cn("h-4 w-4 transition-transform", isCollapsed && "rotate-180")}>
           <path d="M15 18l-6-6 6-6" />
@@ -102,7 +104,7 @@ export default function Layout() {
         {!isCollapsed && "Collapse"}
       </button>
       {!isCollapsed && (
-        <div className="border-t border-white/10 px-5 py-3 text-[11px] leading-relaxed text-white/40">
+        <div className="border-t border-neutral-100 px-5 py-3 text-[11px] leading-relaxed text-neutral-400">
           Chief Minister&apos;s Policy Office
           <br />
           CMPO · Daily Progress Tracking
