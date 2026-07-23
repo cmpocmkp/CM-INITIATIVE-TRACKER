@@ -66,9 +66,9 @@ export default function Initiatives() {
           const r = roll(i);
           return (
             <Link key={i.id} to={`/initiatives/${i.id}`} className="card group p-4 transition hover:border-navy-300 hover:shadow-md">
-              <h3 className="flex items-start gap-2 text-[14px] leading-snug text-neutral-900">
+              <h3 className="flex items-center gap-2 text-[14px] leading-snug text-neutral-900" title={i.name}>
                 <NumBox n={i.number} size={26} />
-                <span className="min-w-0">{i.name}</span>
+                <span className="min-w-0 truncate">{i.shortName}</span>
               </h3>
               <div className="mt-1 truncate text-[11px] text-slate-500" title={i.leadDepartment?.name ?? ""}>
                 Lead: <span className="font-semibold text-slate-700">{deptShort(i.leadDepartment)}</span>

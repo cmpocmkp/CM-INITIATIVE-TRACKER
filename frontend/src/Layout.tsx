@@ -59,7 +59,7 @@ export default function Layout() {
   }
 
   const sidebarContent = (isCollapsed: boolean) => (
-    <div className="flex h-full flex-col bg-[#3b3d40]">
+    <div className="flex h-full flex-col bg-[#55575c]">
       <div className={cn("flex items-center border-b border-white/10 py-4", isCollapsed ? "justify-center px-2" : "gap-3 px-5")}>
         <Logo size={40} className="rounded-lg" />
         {!isCollapsed && (
