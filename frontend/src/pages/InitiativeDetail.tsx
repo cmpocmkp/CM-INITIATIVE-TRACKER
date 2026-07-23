@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { api, Initiative, fmtM, fmtPct, fmtDate } from "../api";
+import { api, Initiative, deptShort, fmtM, fmtPct, fmtDate } from "../api";
 import { Heading, Spinner, ErrorBox, Bar, StageBadge, SiteBadge, Empty } from "../ui";
 import { TrendLine } from "../charts";
 
@@ -48,7 +48,7 @@ export default function InitiativeDetail() {
           </div>
           <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
             {[
-              ["Lead Department", i.leadDepartment ? `${i.leadDepartment.name}` : "—"],
+              ["Lead Department", deptShort(i.leadDepartment)],
               ["Schemes", String(i.schemes.length)],
               ["Portfolio Cost", fmtM(cost)],
               ["Alloc / Spent", `${fmtM(alloc)} · ${fmtM(spent)}`],

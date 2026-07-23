@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, Initiative, fmtM, fmtPct } from "../api";
+import { api, Initiative, deptShort, fmtM, fmtPct } from "../api";
 import { Heading, Spinner, ErrorBox, Bar } from "../ui";
 
 function schemePhys(s: Initiative["schemes"][number]): number {
@@ -59,7 +59,7 @@ export default function Initiatives() {
                 {i.name}
               </h3>
               <div className="mt-1 truncate text-[11px] text-slate-500" title={i.leadDepartment?.name ?? ""}>
-                Lead: <span className="font-semibold text-slate-700">{i.leadDepartment?.name ?? "—"}</span>
+                Lead: <span className="font-semibold text-slate-700">{deptShort(i.leadDepartment)}</span>
               </div>
 
               <div className="mt-2.5 flex items-center gap-2">

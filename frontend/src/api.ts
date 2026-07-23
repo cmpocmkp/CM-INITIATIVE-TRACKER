@@ -254,6 +254,47 @@ export const SITE_STATUSES: { value: SiteStatus; label: string }[] = [
 export const siteLabel = (s?: SiteStatus | null): string =>
   SITE_STATUSES.find((x) => x.value === s)?.label ?? "Not Started";
 
+/** Short, familiar department names for display (Lead: C&W, PHE, …). */
+const DEPT_SHORT: Record<string, string> = {
+  CW: "C&W",
+  LG: "Local Government",
+  HEALTH: "Health",
+  URBAN: "Urban Dev",
+  TRANSPORT: "Transport",
+  HOUSING: "Housing",
+  IND: "Industries",
+  TOURISM: "Tourism",
+  MINES: "Mines",
+  SNGPL: "SNGPL",
+  FIN: "Finance",
+  FOREST: "Forestry",
+  HOME: "Home",
+  ESE: "E&SE",
+  EP: "E&P",
+  STIT: "ST&IT",
+  SW: "Social Welfare",
+  MSD: "MSD",
+  IRRIGATION: "Irrigation",
+  DWSS: "PHE",
+  FOOD: "Food",
+  AUQAF: "Auqaf",
+  LIVESTOCK: "Livestock",
+  INFO: "Information",
+  SPORTS: "Sports",
+  HED: "Higher Education",
+  AGRI: "Agriculture",
+  POP: "Population",
+  LABOUR: "Labour",
+  LAW: "Law",
+  REVENUE: "Revenue",
+  PDMA: "PDMA",
+  EXCISE: "Excise",
+  EST: "Establishment",
+  CMPO: "CMPO",
+};
+export const deptShort = (d?: { code: string; name?: string } | null): string =>
+  d ? (DEPT_SHORT[d.code] ?? d.code) : "—";
+
 /** Signed daily change, e.g. +2.0% */
 export const fmtDelta = (curr?: number | null, prev?: number | null): string | null => {
   if (curr == null || prev == null) return null;

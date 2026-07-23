@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, Dashboard as Dash, fmtM, fmtPct } from "../api";
+import { api, Dashboard as Dash, deptShort, fmtM, fmtPct } from "../api";
 import { useAuth, isStaff } from "../auth";
 import { Kpi, Bar, Heading, Spinner, ErrorBox } from "../ui";
 import { SectorBars, StageDonut, ComplianceBar } from "../charts";
@@ -82,7 +82,7 @@ export default function Dashboard() {
               </div>
               <div className="mt-1.5 flex justify-between text-[11px] text-slate-500">
                 <span>
-                  {i.leadDepartment?.code ?? "—"} · {i.schemes} scheme{i.schemes === 1 ? "" : "s"}
+                  {deptShort(i.leadDepartment)} · {i.schemes} scheme{i.schemes === 1 ? "" : "s"}
                 </span>
                 <span>
                   {fmtM(i.spent)} / {fmtM(i.alloc)}
