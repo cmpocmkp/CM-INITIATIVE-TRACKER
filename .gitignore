@@ -31,3 +31,6 @@ npm-debug.log*
 
 # large source docs (data already extracted to backend/prisma/seed-data.json)
 ADP_2026-27_FINAL_VERSION.pdf
+
+# local claude settings
+.claude/
