@@ -60,7 +60,7 @@ export default function Dashboard() {
             View all →
           </Link>
         </div>
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {d.initiatives.slice(0, staff ? 21 : 12).map((i) => (
             <Link
               key={i.id}
@@ -69,9 +69,7 @@ export default function Dashboard() {
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="text-[13px] font-semibold leading-snug text-navy-900 group-hover:text-navy-700">
-                  <span className="mr-1.5 inline-flex h-5 w-7 items-center justify-center rounded bg-navy-900 text-[10px] font-bold text-white">
-                    {i.number}
-                  </span>
+                  <span className="mr-1.5 font-extrabold text-navy-500">{i.number}.</span>
                   {i.shortName}
                 </div>
                 {i.updatedToday > 0 && (

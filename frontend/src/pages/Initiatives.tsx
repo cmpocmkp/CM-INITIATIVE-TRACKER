@@ -76,15 +76,13 @@ export default function Initiatives() {
         ))}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {filtered.map((i) => {
           const r = roll(i);
           return (
             <Link key={i.id} to={`/initiatives/${i.id}`} className="card group p-5 transition hover:border-navy-300 hover:shadow-md">
               <div className="flex items-start justify-between gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-navy-900 text-sm font-extrabold text-white">
-                  {i.number}
-                </div>
+                <div className="text-2xl font-extrabold leading-none text-navy-400">{i.number}</div>
                 <span className="badge border-navy-100 bg-navy-50 text-navy-600">{i.category}</span>
               </div>
               <h3 className="mt-3 text-[15px] font-bold leading-snug text-navy-900 group-hover:text-navy-700">

@@ -40,9 +40,7 @@ export default function InitiativeDetail() {
       <div className="card overflow-hidden">
         <div className="border-b-4 border-navy-500 bg-white px-6 py-5">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-navy-600 text-lg font-extrabold text-white">
-              {i.number}
-            </div>
+            <div className="text-3xl font-extrabold leading-none text-navy-400">{i.number}</div>
             <div>
               <div className="text-[11px] uppercase tracking-wider text-navy-600">{i.category} · CM Focus Initiative</div>
               <h1 className="text-xl font-bold text-navy-900">{i.name}</h1>
