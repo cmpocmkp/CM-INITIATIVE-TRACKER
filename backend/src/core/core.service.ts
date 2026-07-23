@@ -461,7 +461,7 @@ export class CoreService {
 
     const myschemes = await this.prisma.scheme.findMany({
       where: this.schemeScope(user),
-      select: { id: true, adpAllocation: true },
+      select: { id: true, adpAllocation: true, name: true, _count: { select: { subProjects: true } } },
     });
     const myScheme = new Map(myschemes.map((s) => [s.id, s]));
     const myInits = await this.prisma.initiative.findMany({
@@ -480,6 +480,77 @@ export class CoreService {
     const touchedSchemes = new Set<string>(); // for auto lifecycle-stage sync
     const staffUser = isStaff(user);
     const consumedCorrections: string[] = [];
+
+    // ── Departments must submit the WHOLE day completely: every editable row
+    // present, every required column filled. Nothing saves if anything is missing.
+    if (!staffUser) {
+      const filled = (v: unknown) => v !== null && v !== undefined && String(v).trim() !== "";
+      const requiredFor = (e: SheetEntryInput): string[] => {
+        if (e.entityType === "SCHEME") {
+          const hasSubs = (myScheme.get(e.entityId)?._count.subProjects ?? 0) > 0;
+          return hasSubs
+            ? ["fundsReleased", "expenditure"]
+            : ["phase", "physicalProgressPct", "narrative", "manpower", "machinery", "fundsReleased", "expenditure"];
+        }
+        if (e.entityType === "SUBPROJECT") return ["phase", "physicalProgressPct", "narrative", "manpower", "machinery"];
+        return ["phase", "physicalProgressPct", "narrative"]; // direct initiative entry
+      };
+      const fieldErrors: string[] = [];
+      for (const e of entries) {
+        const missing = requiredFor(e).filter((f) => !filled((e as unknown as Record<string, unknown>)[f]));
+        if (missing.length) fieldErrors.push(`${e.entityType}:${e.entityId} — missing ${missing.join(", ")}`);
+      }
+      if (fieldErrors.length) {
+        return { ok: false, saved: 0, errors: ["Every column must be filled before submission.", ...fieldErrors] };
+      }
+
+      // Completeness of the set: all unlocked editable rows must be in this batch.
+      const mySubsAll = await this.prisma.subProject.findMany({
+        where: { scheme: this.schemeScope(user) },
+        select: { id: true },
+      });
+      const schemelessInits = (
+        await this.prisma.initiative.findMany({
+          where: { ...this.initiativeScope(user), schemes: { none: {} } },
+          select: { id: true },
+        })
+      ).map((i) => i.id);
+      const expectedKeys = new Set<string>([
+        ...myschemes.map((s) => `SCHEME:${s.id}`),
+        ...mySubsAll.map((sp) => `SUBPROJECT:${sp.id}`),
+        ...schemelessInits.map((id) => `INITIATIVE:${id}`),
+      ]);
+      // Rows already submitted today (and not correction-approved) are locked — not expected again.
+      const todays = await this.prisma.progressUpdate.findMany({
+        where: {
+          reportDate: date,
+          OR: [
+            { schemeId: { in: myschemes.map((s) => s.id) } },
+            { subProjectId: { in: mySubsAll.map((s) => s.id) } },
+            { initiativeId: { in: schemelessInits } },
+          ],
+        },
+        select: { schemeId: true, subProjectId: true, initiativeId: true },
+      });
+      const approved = await this.prisma.correctionRequest.findMany({
+        where: { departmentId: user.departmentId ?? "___none___", reportDate: date, status: "APPROVED" },
+        select: { entityType: true, entityId: true },
+      });
+      const approvedKeys = new Set(approved.map((a) => `${a.entityType}:${a.entityId}`));
+      for (const t of todays) {
+        const k = t.schemeId ? `SCHEME:${t.schemeId}` : t.subProjectId ? `SUBPROJECT:${t.subProjectId}` : `INITIATIVE:${t.initiativeId}`;
+        if (!approvedKeys.has(k)) expectedKeys.delete(k);
+      }
+      const providedKeys = new Set(entries.map((e) => `${e.entityType}:${e.entityId}`));
+      const notProvided = [...expectedKeys].filter((k) => !providedKeys.has(k));
+      if (notProvided.length) {
+        return {
+          ok: false,
+          saved: 0,
+          errors: [`The whole day's sheet must be submitted together — ${notProvided.length} row(s) still empty.`],
+        };
+      }
+    }
 
     for (const e of entries) {
       try {

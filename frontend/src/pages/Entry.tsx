@@ -92,6 +92,20 @@ type FlatRow = {
   correction: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED" | null;
 };
 
+/** Required columns per row type — Issues & Additional Details stay optional. */
+function requiredFields(fr: FlatRow): (keyof Draft)[] {
+  if (fr.computed) return [];
+  if (fr.entityType === "SCHEME" && fr.hasSubs) return ["fundsReleased", "expenditure"];
+  if (fr.entityType === "SCHEME")
+    return ["phase", "physicalProgressPct", "narrative", "manpower", "machinery", "fundsReleased", "expenditure"];
+  if (fr.entityType === "SUBPROJECT") return ["phase", "physicalProgressPct", "narrative", "manpower", "machinery"];
+  return ["phase", "physicalProgressPct", "narrative"]; // direct initiative entry
+}
+
+function missingOf(fr: FlatRow, d: Draft): (keyof Draft)[] {
+  return requiredFields(fr).filter((f) => (d[f] ?? "").toString().trim() === "");
+}
+
 function flatten(rows: SheetRow[]): FlatRow[] {
   const out: FlatRow[] = [];
   for (const r of rows) {
@@ -150,8 +164,17 @@ export default function Entry() {
   const [newSub, setNewSub] = useState({ name: "", weight: "", targetDate: "" });
   const [corrFor, setCorrFor] = useState<FlatRow | null>(null);
   const [corrReason, setCorrReason] = useState("");
+  const [attempted, setAttempted] = useState(false);
 
   const rows = useMemo(() => (sheet ? flatten(sheet) : []), [sheet]);
+
+  // Rows the department must fill today (not auto, not already locked)
+  const editableRows = useMemo(() => rows.filter((r) => !r.computed && !r.dayLocked), [rows]);
+  const completeRows = useMemo(
+    () => editableRows.filter((r) => missingOf(r, drafts[r.key] ?? emptyDraft()).length === 0),
+    [editableRows, drafts],
+  );
+  const allComplete = editableRows.length > 0 && completeRows.length === editableRows.length;
 
   async function load() {
     setSheet(null);
@@ -196,17 +219,26 @@ export default function Entry() {
   }
 
   async function saveAll() {
-    if (!dirtyKeys.length) return;
+    if (!editableRows.length) return;
+    // Everything must be complete — the whole day submits as one sealed record.
+    if (!allComplete) {
+      setAttempted(true);
+      const firstIncomplete = editableRows.find((r) => missingOf(r, drafts[r.key] ?? emptyDraft()).length > 0);
+      setErr(
+        `Cannot submit yet — ${editableRows.length - completeRows.length} row(s) have empty fields (highlighted). ` +
+          (firstIncomplete ? `Start with "${firstIncomplete.name.slice(0, 50)}".` : ""),
+      );
+      return;
+    }
     setSaving(true);
     setErr("");
     setNotice("");
     try {
-      const entries = dirtyKeys.map((k) => {
-        const [entityType, entityId] = k.split(":");
-        const d = drafts[k];
+      const entries = editableRows.map((fr) => {
+        const d = drafts[fr.key];
         return {
-          entityType,
-          entityId,
+          entityType: fr.entityType,
+          entityId: fr.entityId,
           phase: d.phase || null,
           physicalProgressPct: d.physicalProgressPct === "" ? null : Number(d.physicalProgressPct),
           narrative: d.narrative || null,
@@ -220,14 +252,13 @@ export default function Entry() {
         };
       });
       const res = await api.post<{ ok: boolean; saved: number; errors: string[] }>("/progress/sheet", { entries });
-      const nb = { ...baseline };
-      for (const k of dirtyKeys) nb[k] = JSON.stringify(drafts[k]);
-      setBaseline(nb);
-      setSavedKeys(new Set(dirtyKeys));
-      setNotice(
-        `Saved ${res.saved} entr${res.saved === 1 ? "y" : "ies"} for ${date}.` +
-          (res.errors.length ? ` Errors: ${res.errors.join("; ")}` : ""),
-      );
+      if (!res.ok && res.saved === 0) {
+        setErr(res.errors.join(" · "));
+        return;
+      }
+      setAttempted(false);
+      setNotice(`✓ Day submitted — ${res.saved} entr${res.saved === 1 ? "y" : "ies"} recorded for ${fmtDate(date)}. The sheet is now locked; corrections go through the CM Office.`);
+      await load(); // reload → rows come back locked 🔒
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -273,13 +304,17 @@ export default function Entry() {
     fr: FlatRow,
     field: keyof Draft,
     kind: "pct" | "int" | "money",
-    opts?: { placeholder?: string; disabled?: boolean },
+    opts?: { placeholder?: string; disabled?: boolean; missing?: boolean },
   ) => (
     <input
       type="text"
       inputMode={kind === "int" ? "numeric" : "decimal"}
       disabled={opts?.disabled}
-      className={cn("cell text-right", opts?.disabled && "cursor-not-allowed text-slate-300")}
+      className={cn(
+        "cell text-right",
+        opts?.disabled && "cursor-not-allowed text-slate-300",
+        opts?.missing && "bg-neutral-100 ring-1 ring-inset ring-neutral-400",
+      )}
       value={drafts[fr.key]?.[field] ?? ""}
       placeholder={opts?.placeholder}
       onChange={(e) =>
@@ -303,14 +338,47 @@ export default function Entry() {
               Reporting date: <span className="font-medium">{date ? fmtDate(date) : "…"}</span>
               <span className="ml-1.5 text-[11px] text-neutral-400">(today · Pakistan)</span>
             </span>
-            <button className="btn-primary" onClick={saveAll} disabled={saving || !dirtyKeys.length}>
-              {saving ? "Saving…" : `Save All${dirtyKeys.length ? ` (${dirtyKeys.length})` : ""}`}
+            <button
+              className={cn("btn-primary", !allComplete && editableRows.length > 0 && "opacity-80")}
+              onClick={saveAll}
+              disabled={saving || editableRows.length === 0}
+              title={allComplete ? "All rows complete — submit the day" : "Fill every required field first (click to highlight what's missing)"}
+            >
+              {saving
+                ? "Submitting…"
+                : editableRows.length === 0
+                  ? "Day Submitted ✓"
+                  : `Submit Day (${completeRows.length}/${editableRows.length})`}
             </button>
           </div>
         }
       />
 
-      {notice && <div className="rounded-lg border border-neutral-300 bg-neutral-50 px-4 py-2.5 text-[13px] text-neutral-800">✓ {notice}</div>}
+      {/* Completion strip — the user always knows where they stand */}
+      {editableRows.length > 0 && (
+        <div className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white px-4 py-2.5">
+          <span className="h-[4px] w-40 flex-1 overflow-hidden rounded-full bg-neutral-100">
+            <span
+              className="block h-full rounded-full bg-neutral-800 transition-all"
+              style={{ width: `${(completeRows.length / editableRows.length) * 100}%` }}
+            />
+          </span>
+          <span className="whitespace-nowrap text-[12px] tabular-nums text-neutral-600">
+            {completeRows.length}/{editableRows.length} rows complete
+          </span>
+          <span className="hidden whitespace-nowrap text-[11px] text-neutral-400 lg:inline">
+            · all fields required except Issues &amp; Details · one submission per day — then the sheet locks
+          </span>
+        </div>
+      )}
+      {editableRows.length === 0 && rows.some((r) => r.dayLocked) && (
+        <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-2.5 text-[13px] text-neutral-700">
+          🔒 Today&apos;s sheet is submitted and locked. To fix a mistake use{" "}
+          <span className="font-medium">request correction</span> on the row — the CM Office approves or rejects it.
+        </div>
+      )}
+
+      {notice && <div className="rounded-lg border border-neutral-300 bg-neutral-50 px-4 py-2.5 text-[13px] text-neutral-800">{notice}</div>}
       {err && <ErrorBox message={err} />}
 
       <div className="card overflow-hidden">
@@ -362,6 +430,9 @@ export default function Entry() {
                 const typedPct = d.physicalProgressPct === "" ? (fr.today?.physicalProgressPct ?? null) : Number(d.physicalProgressPct);
                 const delta = fmtDelta(typedPct, prevPct);
                 const nameBg = dirty ? "bg-neutral-100" : isInit ? "bg-navy-50/50" : "bg-white";
+                const missSet = new Set<string>(!locked ? missingOf(fr, d) : []);
+                const hl = (f: keyof Draft) => attempted && missSet.has(f); // highlight after a submit attempt
+                const rowDone = !locked && missSet.size === 0;
 
                 return (
                   <tr key={fr.key} className={cn("group/row", dirty && "bg-neutral-100/60", isInit && !dirty && "bg-navy-50/30")}>
@@ -409,7 +480,7 @@ export default function Entry() {
                           {frozen ? fr.today?.phase ?? "—" : "—"}
                         </div>
                       ) : (
-                        <select className="cell" value={d.phase} onChange={(e) => set(fr.key, "phase", e.target.value)}>
+                        <select className={cn("cell", hl("phase") && "bg-neutral-100 ring-1 ring-inset ring-neutral-400")} value={d.phase} onChange={(e) => set(fr.key, "phase", e.target.value)}>
                           <option value="">{fr.prev?.phase ? `(${fr.prev.phase})` : "select…"}</option>
                           {PHASES.map((p) => (
                             <option key={p} value={p}>{p}</option>
@@ -425,17 +496,17 @@ export default function Entry() {
                           <span className="text-[8px] font-bold tracking-wide text-slate-400">AUTO</span>
                         </div>
                       ) : (
-                        cellTyped(fr, "physicalProgressPct", "pct", { placeholder: prevPct != null ? String(prevPct) : "0–100", disabled: schemeWithSubs || frozen })
+                        cellTyped(fr, "physicalProgressPct", "pct", { placeholder: prevPct != null ? String(prevPct) : "0–100", disabled: schemeWithSubs || frozen, missing: hl("physicalProgressPct") })
                       )}
                     </td>
                     {/* Δ */}
                     <td className="grid-td text-center"><Delta value={locked ? null : delta} /></td>
                     {/* Work */}
                     <td className="grid-td">
-                      <input className="cell" value={d.narrative} placeholder={fr.computed || frozen ? "" : "today's work…"} onChange={(e) => set(fr.key, "narrative", e.target.value)} disabled={fr.computed || frozen} />
+                      <input className={cn("cell", hl("narrative") && "bg-neutral-100 ring-1 ring-inset ring-neutral-400")} value={d.narrative} placeholder={fr.computed || frozen ? "" : "today's work…"} onChange={(e) => set(fr.key, "narrative", e.target.value)} disabled={fr.computed || frozen} />
                     </td>
-                    <td className="grid-td">{cellTyped(fr, "manpower", "int", { placeholder: fr.prev?.manpower?.toString(), disabled: locked })}</td>
-                    <td className="grid-td">{cellTyped(fr, "machinery", "int", { placeholder: fr.prev?.machinery?.toString(), disabled: locked })}</td>
+                    <td className="grid-td">{cellTyped(fr, "manpower", "int", { placeholder: fr.prev?.manpower?.toString(), disabled: locked, missing: hl("manpower") })}</td>
+                    <td className="grid-td">{cellTyped(fr, "machinery", "int", { placeholder: fr.prev?.machinery?.toString(), disabled: locked, missing: hl("machinery") })}</td>
                     {/* Status */}
                     <td className="grid-td">
                       {locked ? (
@@ -458,24 +529,22 @@ export default function Entry() {
                       <input className="cell" value={d.remarks} placeholder={fr.computed || frozen ? "" : "details…"} onChange={(e) => set(fr.key, "remarks", e.target.value)} disabled={fr.computed || frozen} />
                     </td>
                     <td className="grid-td">
-                      {fr.entityType === "SCHEME" ? cellTyped(fr, "fundsReleased", "money", { placeholder: fr.prev?.fundsReleased?.toString(), disabled: frozen }) : <div className="cell flex items-center justify-center" aria-disabled>—</div>}
+                      {fr.entityType === "SCHEME" ? cellTyped(fr, "fundsReleased", "money", { placeholder: fr.prev?.fundsReleased?.toString(), disabled: frozen, missing: hl("fundsReleased") }) : <div className="cell flex items-center justify-center" aria-disabled>—</div>}
                     </td>
                     <td className="grid-td">
-                      {fr.entityType === "SCHEME" ? cellTyped(fr, "expenditure", "money", { placeholder: fr.prev?.expenditure?.toString(), disabled: frozen }) : <div className="cell flex items-center justify-center" aria-disabled>—</div>}
+                      {fr.entityType === "SCHEME" ? cellTyped(fr, "expenditure", "money", { placeholder: fr.prev?.expenditure?.toString(), disabled: frozen, missing: hl("expenditure") }) : <div className="cell flex items-center justify-center" aria-disabled>—</div>}
                     </td>
                     <td className="grid-td !border-r-0 text-center">
                       {fr.computed ? (
                         <span className="text-[9px] font-bold text-slate-300">AUTO</span>
                       ) : frozen ? (
                         <span title="Submitted — locked for today. Use 'request correction' to edit.">🔒</span>
-                      ) : saved ? (
-                        <span className="font-bold text-neutral-900">✓</span>
-                      ) : dirty ? (
-                        <span className="text-neutral-500">●</span>
-                      ) : fr.today ? (
-                        <span className="text-navy-400">✓</span>
+                      ) : rowDone ? (
+                        <span className="font-bold text-neutral-900" title="Row complete — ready to submit">✓</span>
                       ) : (
-                        <span className="text-slate-200">—</span>
+                        <span className="text-[10px] tabular-nums text-neutral-400" title={`${missSet.size} required field(s) empty`}>
+                          {missSet.size} left
+                        </span>
                       )}
                     </td>
                   </tr>
