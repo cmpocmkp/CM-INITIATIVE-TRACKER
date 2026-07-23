@@ -65,7 +65,7 @@ export default function Layout() {
         {!isCollapsed && (
           <div className="leading-tight">
             <div className="text-[13px] font-bold text-white">CM INITIATIVE TRACKER</div>
-            <div className="text-[11px] text-white/50">Government of Khyber Pakhtunkhwa</div>
+            <div className="text-[11px] text-white/50">GoKP</div>
           </div>
         )}
       </div>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, Initiative, fmtM, fmtPct } from "../api";
 import { Heading, Spinner, ErrorBox, Bar } from "../ui";
@@ -37,78 +37,48 @@ function roll(i: Initiative) {
 export default function Initiatives() {
   const [list, setList] = useState<Initiative[] | null>(null);
   const [err, setErr] = useState("");
-  const [cat, setCat] = useState("All");
 
   useEffect(() => {
     api.get<Initiative[]>("/initiatives").then(setList).catch((e) => setErr((e as Error).message));
   }, []);
 
-  const cats = useMemo(
-    () => ["All", ...Array.from(new Set((list ?? []).map((i) => i.category)))],
-    [list],
-  );
-
   if (err) return <ErrorBox message={err} />;
   if (!list) return <Spinner label="Loading initiatives…" />;
 
-  const filtered = cat === "All" ? list : list.filter((i) => i.category === cat);
-
   return (
     <div className="space-y-5">
-      <Heading
-        title="The 21 CM Focus Initiatives"
-        subtitle="Chief Minister's flagship priorities — each groups its ADP schemes across departments"
-      />
+      <Heading title="21 Initiatives" />
 
-      <div className="flex flex-wrap gap-2">
-        {cats.map((c) => (
-          <button
-            key={c}
-            onClick={() => setCat(c)}
-            className={
-              c === cat
-                ? "badge border-navy-800 bg-navy-800 text-white"
-                : "badge border-slate-300 bg-white text-slate-600 hover:border-navy-400"
-            }
-          >
-            {c}
-          </button>
-        ))}
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {filtered.map((i) => {
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {list.map((i) => {
           const r = roll(i);
           return (
-            <Link key={i.id} to={`/initiatives/${i.id}`} className="card group p-5 transition hover:border-navy-300 hover:shadow-md">
-              <div className="flex items-start justify-between gap-3">
-                <div className="text-2xl font-extrabold leading-none text-navy-400">{i.number}</div>
-                <span className="badge border-navy-100 bg-navy-50 text-navy-600">{i.category}</span>
-              </div>
-              <h3 className="mt-3 text-[15px] font-bold leading-snug text-navy-900 group-hover:text-navy-700">
+            <Link key={i.id} to={`/initiatives/${i.id}`} className="card group p-4 transition hover:border-navy-300 hover:shadow-md">
+              <h3 className="text-[14px] font-bold leading-snug text-navy-900 group-hover:text-navy-700">
+                <span className="mr-1.5 text-navy-500">{i.number}.</span>
                 {i.name}
               </h3>
-              <div className="mt-1 text-[12px] text-slate-500">
+              <div className="mt-1 truncate text-[11px] text-slate-500" title={i.leadDepartment?.name ?? ""}>
                 Lead: <span className="font-semibold text-slate-700">{i.leadDepartment?.name ?? "—"}</span>
               </div>
 
-              <div className="mt-4 flex items-center gap-3">
+              <div className="mt-2.5 flex items-center gap-2">
                 <Bar value={r.phys} className="flex-1" />
-                <div className="text-sm font-bold text-navy-800">{fmtPct(r.phys)}</div>
+                <div className="text-[13px] font-bold text-navy-800">{fmtPct(r.phys)}</div>
               </div>
 
-              <div className="mt-3 grid grid-cols-3 gap-2 border-t border-slate-100 pt-3 text-center">
+              <div className="mt-2.5 grid grid-cols-3 gap-1 border-t border-slate-100 pt-2 text-center">
                 <div>
-                  <div className="text-[10px] uppercase tracking-wide text-slate-400">Schemes</div>
-                  <div className="text-[13px] font-bold text-navy-900">{i.schemes.length}</div>
+                  <div className="text-[9px] uppercase tracking-wide text-slate-400">Schemes</div>
+                  <div className="text-[12px] font-bold text-navy-900">{i.schemes.length}</div>
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase tracking-wide text-slate-400">Allocation</div>
-                  <div className="text-[13px] font-bold text-navy-900">{fmtM(r.alloc)}</div>
+                  <div className="text-[9px] uppercase tracking-wide text-slate-400">Allocation</div>
+                  <div className="text-[12px] font-bold text-navy-900">{fmtM(r.alloc)}</div>
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase tracking-wide text-slate-400">Spent</div>
-                  <div className="text-[13px] font-bold text-navy-900">{fmtM(r.spent)}</div>
+                  <div className="text-[9px] uppercase tracking-wide text-slate-400">Spent</div>
+                  <div className="text-[12px] font-bold text-navy-900">{fmtM(r.spent)}</div>
                 </div>
               </div>
             </Link>
