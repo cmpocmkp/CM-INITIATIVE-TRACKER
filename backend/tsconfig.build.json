@@ -1,4 +1,9 @@
 {
   "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Never incremental in CI — a stale/committed .tsbuildinfo makes tsc skip
+    // emitting entirely and the deploy ships without backend/dist.
+    "incremental": false
+  },
   "exclude": ["node_modules", "dist", "prisma"]
 }

@@ -34,3 +34,6 @@ ADP_2026-27_FINAL_VERSION.pdf
 
 # local claude settings
 .claude/
+
+# ts incremental build info
+*.tsbuildinfo
