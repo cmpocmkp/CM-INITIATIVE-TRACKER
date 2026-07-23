@@ -43,18 +43,40 @@ async function main() {
   const landItems = [
     {
       name: "Section-11 Award — 52 Km ROW (Malakand & Swat)",
+      weight: 52, // kilometres — scheme % rolls up as km awarded / 80
       description:
         "Section-4 imposed on entire 80 Km ROW; Section-11 award announced for 52 Km after fund release — 65% encumbrance-free ROW per Finance (C&W summary cites 56% of land area). Rs 8,200M released to date; Rs 3,100M short for the acquired 5,650 Kanal.",
     },
     {
       name: "Remaining ROW Acquisition (28 Km / 40%) — Rs 11,800M Bridge Financing",
+      weight: 28,
       description:
         "Balance Rs 11,800M sought as bridge financing (supplementary grant) — P&D concurred 24-03-2026; Finance requires routing via PPP Committee under PPP Act 2020 and de-linking from financial close; Chief Secretary sought C&W response 26-04-2026.",
     },
   ];
   for (const w of landItems) {
     const exists = await prisma.subProject.findFirst({ where: { schemeId: land.id, name: w.name } });
-    if (!exists) await prisma.subProject.create({ data: { schemeId: land.id, name: w.name, description: w.description } });
+    if (!exists)
+      await prisma.subProject.create({
+        data: { schemeId: land.id, name: w.name, description: w.description, weight: (w as { weight?: number }).weight ?? null },
+      });
+  }
+
+  // Documented tranche completion: 52 Km award announced → that work item is complete.
+  const awarded = await prisma.subProject.findFirst({ where: { schemeId: land.id, name: { startsWith: "Section-11" } } });
+  if (awarded && !(await prisma.progressUpdate.findFirst({ where: { subProjectId: awarded.id, reportDate: BASELINE } }))) {
+    await prisma.progressUpdate.create({
+      data: {
+        subProjectId: awarded.id,
+        reportDate: BASELINE,
+        phase: "Land Acquisition",
+        physicalProgressPct: 100,
+        siteStatus: "COMPLETED",
+        narrative:
+          "Section-11 award announced for 52 Km ROW — land available to concessionaire (per C&W Summary; Finance computes 65% of the 80 Km corridor).",
+        bottlenecks: "Released funds Rs 3,100M short for the acquired 5,650 Kanal — compensation payments pending.",
+      },
+    });
   }
 
   // Documented baseline on the land scheme: 65% ROW awarded, Rs 8,200M released.
