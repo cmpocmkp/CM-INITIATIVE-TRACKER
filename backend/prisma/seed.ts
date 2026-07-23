@@ -41,7 +41,7 @@ const DEPARTMENTS: { key: string; code: string; name: string; isSector: boolean 
   { key: "Industries", code: "IND", name: "Industries, Commerce & Technical Education", isSector: true },
   { key: "Information", code: "INFO", name: "Information & Public Relations", isSector: true },
   { key: "Livestock", code: "LIVESTOCK", name: "Livestock, Dairy & Fisheries Development", isSector: true },
-  { key: "Mines", code: "MINES", name: "Mines & Mineral Development", isSector: true },
+  { key: "Mines", code: "MINES", name: "Minerals Development", isSector: true },
   { key: "MSD", code: "MSD", name: "Multi-Sectoral Development (P&D)", isSector: true },
   { key: "Roads", code: "CW", name: "Communication & Works (Roads)", isSector: true },
   { key: "SNGPL", code: "SNGPL", name: "Sui Northern Gas Pipelines Ltd", isSector: true },
