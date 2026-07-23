@@ -68,12 +68,12 @@ export function Delta({ value }: { value: string | null }) {
   );
 }
 
-/** Thin outlined square holding a number that fills it. */
+/** Apple-style rounded square (continuous-corner look) holding a number that fills it. */
 export function NumBox({ n, size = 28 }: { n: number; size?: number }) {
   return (
     <span
-      className="inline-flex shrink-0 items-center justify-center border border-neutral-300 font-light leading-none text-neutral-800"
-      style={{ width: size, height: size, fontSize: Math.round(size * 0.62) }}
+      className="inline-flex shrink-0 items-center justify-center bg-neutral-100 font-light leading-none text-neutral-800"
+      style={{ width: size, height: size, fontSize: Math.round(size * 0.58), borderRadius: Math.round(size * 0.28) }}
     >
       {n}
     </span>

@@ -3,7 +3,8 @@
 @tailwind utilities;
 
 body {
-  @apply bg-white text-neutral-800 antialiased;
+  /* Very light navy wash behind the white tiles */
+  @apply bg-[#f2f5f9] text-neutral-800 antialiased;
 }
 
 /* Thin typography app-wide: neutralize bold utilities (max emphasis = medium). */
