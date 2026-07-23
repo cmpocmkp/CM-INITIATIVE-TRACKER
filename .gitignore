@@ -1,0 +1,33 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# builds
+backend/dist/
+frontend/dist/
+.next/
+out/
+
+# env & secrets — NEVER commit
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# misc
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+
+# excel temp locks
+~$*.xlsx
+
+# railway / vercel
+.vercel
+
+# large source docs (data already extracted to backend/prisma/seed-data.json)
+ADP_2026-27_FINAL_VERSION.pdf

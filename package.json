@@ -1,0 +1,24 @@
+{
+  "name": "cm-initiative-sector",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CM INITIATIVE SECTOR — KP CM Priority Initiatives & Sector Tracking Platform (NestJS + React monolith)",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev:backend": "npm run dev -w backend",
+    "dev:frontend": "npm run dev -w frontend",
+    "build": "npm run build -w frontend && npm run build -w backend",
+    "db:push": "prisma db push --schema backend/prisma/schema.prisma",
+    "db:seed": "tsx backend/prisma/seed.ts",
+    "start": "prisma db push --skip-generate --schema backend/prisma/schema.prisma && tsx backend/prisma/seed.ts && node backend/dist/main.js",
+    "start:app": "node backend/dist/main.js",
+    "postinstall": "prisma generate --schema backend/prisma/schema.prisma"
+  },
+  "dependencies": {
+    "prisma": "6.2.1",
+    "tsx": "4.19.2"
+  }
+}

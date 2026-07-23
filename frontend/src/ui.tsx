@@ -1,0 +1,76 @@
+import { Stage, stageLabel } from "./api";
+
+export const cn = (...parts: (string | false | null | undefined)[]) => parts.filter(Boolean).join(" ");
+
+export function Kpi({ label, value, sub }: { label: string; value: React.ReactNode; sub?: React.ReactNode }) {
+  return (
+    <div className="card border-l-4 border-l-navy-700 p-4">
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">{label}</div>
+      <div className="mt-1 text-2xl font-bold text-navy-900">{value}</div>
+      {sub != null && <div className="mt-0.5 text-xs text-slate-500">{sub}</div>}
+    </div>
+  );
+}
+
+export function Bar({ value, className }: { value: number; className?: string }) {
+  const v = Math.max(0, Math.min(100, value || 0));
+  return (
+    <div className={cn("h-2 w-full overflow-hidden rounded-full bg-navy-50", className)}>
+      <div
+        className={cn("h-full rounded-full", v >= 100 ? "bg-navy-900" : "bg-navy-600")}
+        style={{ width: `${v}%` }}
+      />
+    </div>
+  );
+}
+
+const STAGE_STYLE: Record<Stage, string> = {
+  NOT_STARTED: "bg-slate-100 text-slate-600 border-slate-200",
+  FEASIBILITY: "bg-navy-50 text-navy-700 border-navy-200",
+  PC1_APPROVAL: "bg-navy-100 text-navy-800 border-navy-300",
+  TENDERING: "bg-amber-50 text-amber-700 border-amber-200",
+  EXECUTION: "bg-navy-700 text-white border-navy-700",
+  COMPLETED: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  ON_HOLD: "bg-rose-50 text-rose-700 border-rose-200",
+};
+
+export function StageBadge({ stage }: { stage?: Stage | null }) {
+  const s = stage ?? "NOT_STARTED";
+  return <span className={cn("badge", STAGE_STYLE[s])}>{stageLabel(s)}</span>;
+}
+
+export function Heading({ title, subtitle, action }: { title: string; subtitle?: React.ReactNode; action?: React.ReactNode }) {
+  return (
+    <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h1 className="text-xl font-bold tracking-tight text-navy-900 sm:text-2xl">{title}</h1>
+        {subtitle && <p className="mt-1 text-sm text-slate-500">{subtitle}</p>}
+      </div>
+      {action}
+    </div>
+  );
+}
+
+export function Spinner({ label = "Loading…" }: { label?: string }) {
+  return (
+    <div className="flex items-center justify-center gap-3 p-12 text-sm text-slate-500">
+      <span className="h-5 w-5 animate-spin rounded-full border-2 border-navy-200 border-t-navy-700" />
+      {label}
+    </div>
+  );
+}
+
+export function ErrorBox({ message }: { message: string }) {
+  return (
+    <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{message}</div>
+  );
+}
+
+export function Empty({ title, hint }: { title: string; hint?: string }) {
+  return (
+    <div className="card flex flex-col items-center justify-center gap-1 p-10 text-center">
+      <div className="text-sm font-medium text-slate-700">{title}</div>
+      {hint && <div className="text-xs text-slate-500">{hint}</div>}
+    </div>
+  );
+}

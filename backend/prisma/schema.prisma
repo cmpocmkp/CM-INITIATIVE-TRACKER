@@ -1,0 +1,132 @@
+// CM INITIATIVE SECTOR — data model
+// Departments == Sectors (one dimension, per requirement).
+// 21 focus Initiatives group Schemes across departments.
+// Schemes are the ADP priority projects (86 seeded, more can be added).
+// ProgressUpdate is the daily "Google Form" submission per scheme.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPERADMIN
+  ADMIN
+  DEPARTMENT
+}
+
+enum SchemeStage {
+  NOT_STARTED
+  FEASIBILITY
+  PC1_APPROVAL
+  TENDERING
+  EXECUTION
+  COMPLETED
+  ON_HOLD
+}
+
+// A Department is also a Sector (same dimension).
+model Department {
+  id             String       @id @default(cuid())
+  key            String       @unique // matches ADP sector string or an extra dept key
+  code           String       @unique // short code / login username
+  name           String // full display name
+  isSector       Boolean      @default(true) // has ADP schemes attached
+  createdAt      DateTime     @default(now())
+
+  users          User[]
+  schemes        Scheme[]     @relation("SchemeDepartment")
+  ledInitiatives Initiative[] @relation("InitiativeLead")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  username     String    @unique
+  passwordHash String
+  name         String
+  role         Role      @default(DEPARTMENT)
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+  createdAt    DateTime  @default(now())
+  lastLoginAt  DateTime?
+
+  progressUpdates ProgressUpdate[]
+}
+
+// One of the 21 CM focus initiatives.
+model Initiative {
+  id               String      @id @default(cuid())
+  number           Int         @unique // 1..21
+  name             String
+  shortName        String
+  description      String?
+  category         String      @default("General")
+  leadDepartmentId String?
+  leadDepartment   Department? @relation("InitiativeLead", fields: [leadDepartmentId], references: [id])
+  createdAt        DateTime    @default(now())
+
+  schemes          Scheme[]
+  updates          ProgressUpdate[]
+}
+
+// An ADP scheme / project (priority project). Belongs to a department (owner
+// for data entry) and optionally to one of the 21 initiatives.
+model Scheme {
+  id            String      @id @default(cuid())
+  adpCode       String? // ADP scheme number, e.g. "251627"
+  name          String
+  rawName       String
+  sector        String // original ADP sector label
+  totalCost     Float? // Rs. in millions (PC-1 cost)
+  adpAllocation Float? // Rs. in millions (current FY allocation)
+  isPRP         Boolean     @default(false)
+  isPlaceholder Boolean     @default(false)
+
+  departmentId  String
+  department    Department  @relation("SchemeDepartment", fields: [departmentId], references: [id])
+
+  initiativeId  String?
+  initiative    Initiative? @relation(fields: [initiativeId], references: [id])
+
+  createdAt     DateTime    @default(now())
+
+  updates       ProgressUpdate[]
+
+  @@index([departmentId])
+  @@index([initiativeId])
+  @@index([adpCode])
+}
+
+// A daily progress submission (the department "form" reply).
+// Entity = a Scheme OR an Initiative — exactly one of the two FKs is set.
+model ProgressUpdate {
+  id                   String      @id @default(cuid())
+
+  schemeId             String?
+  scheme               Scheme?     @relation(fields: [schemeId], references: [id], onDelete: Cascade)
+
+  initiativeId         String?
+  initiative           Initiative? @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
+
+  submittedById        String?
+  submittedBy          User?       @relation(fields: [submittedById], references: [id])
+
+  reportDate           DateTime // date-only (midnight UTC) the progress refers to
+  fundsReleased        Float? // Rs. in millions, cumulative
+  expenditure          Float? // Rs. in millions, cumulative (amount spent)
+  financialProgressPct Float? // 0..100
+  physicalProgressPct  Float? // 0..100
+  stage                SchemeStage @default(NOT_STARTED)
+  narrative            String? // what progressed
+  bottlenecks          String? // issues / blockers
+  photoUrl             String?
+  createdAt            DateTime    @default(now())
+
+  @@unique([schemeId, reportDate])
+  @@unique([initiativeId, reportDate])
+  @@index([reportDate])
+}

@@ -1,0 +1,184 @@
+// Minimal typed fetch wrapper — same-origin /api (Vite proxies in dev).
+
+export class ApiError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`/api${path}`, {
+    credentials: "include",
+    headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
+    ...init,
+  });
+  if (res.status === 401 && !path.startsWith("/auth")) {
+    window.location.href = "/login";
+    throw new ApiError(401, "Not signed in");
+  }
+  const text = await res.text();
+  let data: unknown = text;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    /* html or plain text (e.g. digest preview) */
+  }
+  if (!res.ok) {
+    const msg =
+      (data && typeof data === "object" && "message" in data
+        ? String((data as { message: unknown }).message)
+        : null) || `Request failed (${res.status})`;
+    throw new ApiError(res.status, msg);
+  }
+  return data as T;
+}
+
+export const api = {
+  get: <T>(path: string) => request<T>(path),
+  post: <T>(path: string, body?: unknown) =>
+    request<T>(path, { method: "POST", body: body != null ? JSON.stringify(body) : undefined }),
+};
+
+// ── Shared types (mirror backend responses) ───────────────────
+export type Role = "SUPERADMIN" | "ADMIN" | "DEPARTMENT";
+export type Stage =
+  | "NOT_STARTED"
+  | "FEASIBILITY"
+  | "PC1_APPROVAL"
+  | "TENDERING"
+  | "EXECUTION"
+  | "COMPLETED"
+  | "ON_HOLD";
+
+export interface SessionUser {
+  userId: string;
+  username: string;
+  name: string;
+  role: Role;
+  departmentId: string | null;
+  departmentName: string | null;
+}
+
+export interface Update {
+  id: string;
+  reportDate: string;
+  fundsReleased: number | null;
+  expenditure: number | null;
+  financialProgressPct: number | null;
+  physicalProgressPct: number | null;
+  stage: Stage;
+  narrative: string | null;
+  bottlenecks: string | null;
+  createdAt: string;
+  submittedBy?: { name: string; username: string } | null;
+}
+
+export interface DeptRef {
+  id: string;
+  name: string;
+  code: string;
+}
+
+export interface Scheme {
+  id: string;
+  adpCode: string | null;
+  name: string;
+  rawName: string;
+  sector: string;
+  totalCost: number | null;
+  adpAllocation: number | null;
+  isPRP: boolean;
+  isPlaceholder: boolean;
+  department: DeptRef;
+  initiative: { id: string; number: number; shortName: string; name?: string } | null;
+  updates: Update[];
+}
+
+export interface Initiative {
+  id: string;
+  number: number;
+  name: string;
+  shortName: string;
+  category: string;
+  leadDepartment: DeptRef | null;
+  updates: Update[];
+  schemes: (Scheme & { department?: DeptRef })[];
+  trend?: { reportDate: string; physicalProgressPct: number | null; financialProgressPct: number | null; expenditure: number | null }[];
+}
+
+export interface Totals {
+  count: number;
+  totalCost: number;
+  totalAlloc: number;
+  totalReleased: number;
+  totalSpent: number;
+  avgPhysical: number;
+  avgFinancial: number;
+  updatedToday: number;
+  reported: number;
+  completed: number;
+}
+
+export interface Dashboard {
+  role: Role;
+  department: { id: string | null; name: string | null } | null;
+  totals: Totals;
+  stageDist: Record<string, number>;
+  sectors: { sector: string; count: number; cost: number; alloc: number; spent: number; avgPhysical: number; updatedToday: number }[];
+  initiatives: {
+    id: string;
+    number: number;
+    name: string;
+    shortName: string;
+    category: string;
+    leadDepartment: DeptRef | null;
+    schemes: number;
+    cost: number;
+    alloc: number;
+    spent: number;
+    avgPhysical: number;
+    updatedToday: number;
+  }[];
+  compliance: { id: string; name: string; code: string; schemes: number; updatedToday: number; reported: number }[];
+  today: string;
+}
+
+export interface SheetRow {
+  entityType: "SCHEME" | "INITIATIVE";
+  entityId: string;
+  name: string;
+  adpCode: string | null;
+  sector: string;
+  department: DeptRef | null;
+  totalCost: number | null;
+  adpAllocation: number | null;
+  isPRP: boolean;
+  initiative?: { id: string; number: number; shortName: string } | null;
+  today: Update | null;
+  latest: Update | null;
+}
+
+// ── Formatters ────────────────────────────────────────────────
+export const fmtM = (n?: number | null): string => {
+  if (n == null) return "—";
+  if (Math.abs(n) >= 1000) return `Rs ${(n / 1000).toLocaleString(undefined, { maximumFractionDigits: 2 })} Bn`;
+  return `Rs ${n.toLocaleString(undefined, { maximumFractionDigits: n < 10 ? 2 : 0 })} M`;
+};
+export const fmtPct = (n?: number | null): string => (n == null ? "—" : `${Math.round(n)}%`);
+export const fmtDate = (d?: string | null): string =>
+  d ? new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+export const todayStr = (): string => new Date().toISOString().slice(0, 10);
+
+export const STAGES: { value: Stage; label: string }[] = [
+  { value: "NOT_STARTED", label: "Not Started" },
+  { value: "FEASIBILITY", label: "Feasibility" },
+  { value: "PC1_APPROVAL", label: "PC-1 / Approval" },
+  { value: "TENDERING", label: "Tendering" },
+  { value: "EXECUTION", label: "Execution" },
+  { value: "COMPLETED", label: "Completed" },
+  { value: "ON_HOLD", label: "On Hold" },
+];
+export const stageLabel = (s?: Stage | null): string =>
+  STAGES.find((x) => x.value === s)?.label ?? "Not Started";
