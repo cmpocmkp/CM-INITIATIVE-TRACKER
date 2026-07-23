@@ -3,6 +3,15 @@ import { Link } from "react-router-dom";
 import { api, Dashboard as Dash, deptShort, fmtM, fmtPct } from "../api";
 import { useAuth, isStaff } from "../auth";
 import { Kpi, Bar, Heading, Spinner, ErrorBox, NumBox } from "../ui";
+
+/** Reporting dot: filled = all reported today, half = partial, hollow = none. */
+function cnDot(i: { schemes: number; updatedToday: number }): string {
+  const base = "h-1.5 w-1.5 shrink-0 rounded-full";
+  const full = i.schemes > 0 ? i.updatedToday >= i.schemes : i.updatedToday > 0;
+  if (full) return `${base} bg-neutral-900`;
+  if (i.updatedToday > 0) return `${base} bg-neutral-400`;
+  return `${base} border border-neutral-300 bg-white`;
+}
 import { SectorBars, StageDonut, ComplianceBar } from "../charts";
 
 export default function Dashboard() {
@@ -50,44 +59,40 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Initiatives strip */}
-      <div className="card p-5">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-bold uppercase tracking-wide text-navy-900">
-            {staff ? "21 CM Focus Initiatives" : "Initiatives You Contribute To"}
-          </h2>
-          <Link to="/initiatives" className="text-xs font-semibold text-navy-600 hover:text-navy-800">
-            View all →
-          </Link>
+      {/* Daily Progress — minimalist initiative list */}
+      <div className="card p-6">
+        <div className="mb-2 flex items-baseline justify-between">
+          <h2 className="text-sm uppercase tracking-widest text-neutral-900">Daily Progress</h2>
+          <div className="flex items-baseline gap-4">
+            <span className="text-[11px] text-neutral-400">{d.today}</span>
+            <Link to="/initiatives" className="text-[11px] text-neutral-500 hover:text-neutral-900">
+              View all →
+            </Link>
+          </div>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {d.initiatives.slice(0, staff ? 21 : 12).map((i) => (
+        <div className="grid gap-x-12 lg:grid-cols-2">
+          {d.initiatives.map((i) => (
             <Link
               key={i.id}
               to={`/initiatives/${i.id}`}
-              className="group rounded-lg border border-slate-200 p-3 transition hover:border-navy-300 hover:bg-navy-50/40"
+              className="group flex items-center gap-3 border-b border-neutral-100 py-2.5"
+              title={`${i.name} — ${deptShort(i.leadDepartment)} · ${i.schemes} scheme${i.schemes === 1 ? "" : "s"}`}
             >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-start gap-2 text-[13px] leading-snug text-neutral-900">
-                  <NumBox n={i.number} size={24} />
-                  <span className="min-w-0">{i.shortName}</span>
-                </div>
-                {i.updatedToday > 0 && (
-                  <span className="badge border-neutral-300 bg-neutral-50 text-neutral-700">today ✓</span>
-                )}
-              </div>
-              <div className="mt-2 flex items-center gap-2">
-                <Bar value={i.avgPhysical} className="flex-1" />
-                <span className="w-10 text-right text-xs font-bold text-navy-800">{fmtPct(i.avgPhysical)}</span>
-              </div>
-              <div className="mt-1.5 flex justify-between text-[11px] text-slate-500">
-                <span>
-                  {deptShort(i.leadDepartment)} · {i.schemes} scheme{i.schemes === 1 ? "" : "s"}
-                </span>
-                <span>
-                  {fmtM(i.spent)} / {fmtM(i.alloc)}
-                </span>
-              </div>
+              <NumBox n={i.number} size={22} />
+              <span className="min-w-0 flex-1 truncate text-[13px] text-neutral-600 transition-colors group-hover:text-neutral-900">
+                {i.shortName}
+              </span>
+              <span
+                className={cnDot(i)}
+                title={i.schemes > 0 ? `${i.updatedToday}/${i.schemes} reported today` : i.updatedToday > 0 ? "reported today" : "no report today"}
+              />
+              <span className="hidden w-14 shrink-0 text-right text-[10px] tabular-nums text-neutral-300 sm:block">
+                {i.schemes > 0 ? `${i.updatedToday}/${i.schemes}` : ""}
+              </span>
+              <span className="h-[3px] w-24 shrink-0 overflow-hidden rounded-full bg-neutral-100 sm:w-32">
+                <span className="block h-full bg-neutral-800" style={{ width: `${Math.min(100, i.avgPhysical || 0)}%` }} />
+              </span>
+              <span className="w-11 shrink-0 text-right text-[12px] tabular-nums text-neutral-800">{fmtPct(i.avgPhysical)}</span>
             </Link>
           ))}
         </div>
