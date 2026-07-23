@@ -273,9 +273,9 @@ export default function Entry() {
     <div className="space-y-4">
       <Heading
         title="Daily Data Entry"
-        subtitle="Like a spreadsheet: % is cumulative from start — the system computes today's increase (Δ) itself. Money (Rs M) is entered at scheme level."
+        subtitle="Cumulative % from start — Δ, financial % and statuses compute automatically."
         action={
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <input type="date" className="input w-auto" value={date} max={todayStr()} onChange={(e) => setDate(e.target.value)} />
             <button className="btn-primary" onClick={saveAll} disabled={saving || !dirtyKeys.length}>
               {saving ? "Saving…" : `Save All${dirtyKeys.length ? ` (${dirtyKeys.length})` : ""}`}
@@ -289,24 +289,37 @@ export default function Entry() {
 
       <div className="card overflow-hidden">
         <div className="scroll-thin overflow-x-auto">
-          <table className="w-full border-collapse" style={{ minWidth: 1680 }}>
-            <thead>
-              <tr className="border-b-2 border-navy-200 bg-navy-50 text-navy-900">
-                <th className="sticky left-0 z-10 bg-navy-50 px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-wider" style={{ minWidth: 300 }}>
-                  Scheme / Work Item
-                </th>
-                <th className="th !text-navy-800" style={{ minWidth: 140 }}>Current Phase</th>
-                <th className="th !text-right !text-navy-800">% Complete</th>
-                <th className="th !text-center !text-navy-800">Δ Today</th>
-                <th className="th !text-navy-800" style={{ minWidth: 200 }}>Work Done Today</th>
-                <th className="th !text-right !text-navy-800">Manpower</th>
-                <th className="th !text-right !text-navy-800">Machinery</th>
-                <th className="th !text-navy-800">Site Status</th>
-                <th className="th !text-navy-800" style={{ minWidth: 160 }}>Issues / Needs Decision</th>
-                <th className="th !text-navy-800" style={{ minWidth: 170 }}>Additional Details</th>
-                <th className="th !text-right !text-navy-800">Released (M)</th>
-                <th className="th !text-right !text-navy-800">Spent (M)</th>
-                <th className="th !text-center !text-navy-800">✓</th>
+          <table className="w-full table-fixed border-collapse" style={{ minWidth: 1810 }}>
+            <colgroup>
+              <col style={{ width: 340 }} />
+              <col style={{ width: 165 }} />
+              <col style={{ width: 92 }} />
+              <col style={{ width: 76 }} />
+              <col style={{ width: 230 }} />
+              <col style={{ width: 88 }} />
+              <col style={{ width: 88 }} />
+              <col style={{ width: 130 }} />
+              <col style={{ width: 200 }} />
+              <col style={{ width: 200 }} />
+              <col style={{ width: 105 }} />
+              <col style={{ width: 105 }} />
+              <col style={{ width: 48 }} />
+            </colgroup>
+            <thead className="sticky top-0 z-20">
+              <tr>
+                <th className="grid-th sticky left-0 z-30 bg-white shadow-[2px_0_4px_-2px_rgba(11,74,104,0.15)]">Scheme / Work Item</th>
+                <th className="grid-th">Phase</th>
+                <th className="grid-th !text-right">% Done</th>
+                <th className="grid-th !text-center">Δ Today</th>
+                <th className="grid-th">Work Done Today</th>
+                <th className="grid-th !text-right">Manpower</th>
+                <th className="grid-th !text-right">Machinery</th>
+                <th className="grid-th">Site Status</th>
+                <th className="grid-th">Issues / Decisions</th>
+                <th className="grid-th">Additional Details</th>
+                <th className="grid-th !text-right">Released M</th>
+                <th className="grid-th !text-right">Spent M</th>
+                <th className="grid-th !border-r-0 !text-center">✓</th>
               </tr>
             </thead>
             <tbody>
@@ -316,135 +329,113 @@ export default function Entry() {
                 const saved = savedKeys.has(fr.key);
                 const isInit = fr.entityType === "INITIATIVE";
                 const schemeWithSubs = fr.entityType === "SCHEME" && fr.hasSubs;
-                // Locked = value comes from elsewhere (rollup) — no double typing.
                 const locked = schemeWithSubs || fr.computed;
                 const prevPct = fr.prev?.physicalProgressPct ?? null;
                 const typedPct = d.physicalProgressPct === "" ? (fr.today?.physicalProgressPct ?? null) : Number(d.physicalProgressPct);
                 const delta = fmtDelta(typedPct, prevPct);
+                const nameBg = dirty ? "bg-amber-50" : isInit ? "bg-navy-50/50" : "bg-white";
 
                 return (
-                  <tr
-                    key={fr.key}
-                    className={cn(
-                      "border-b border-slate-100",
-                      isInit ? "bg-navy-50/70" : fr.isSub ? "bg-white" : "bg-slate-50/70",
-                      dirty && "!bg-amber-50/70",
-                    )}
-                  >
-                    <td className={cn("sticky left-0 z-10 px-3 py-2 text-[13px]", isInit ? "bg-navy-50" : dirty ? "bg-amber-50" : fr.isSub ? "bg-white" : "bg-slate-50")}>
-                      <div className={cn("flex items-start gap-1.5 leading-snug", fr.isSub && "pl-5")}>
-                        {fr.isSub && <span className="mt-0.5 text-navy-300">└</span>}
-                        <div className="min-w-0">
-                          <div className={cn("font-medium", isInit ? "text-navy-800" : fr.isSub ? "text-slate-700" : "text-slate-900")}>
-                            {fr.tag && (
-                              <span className={cn("mr-1.5 rounded px-1.5 py-0.5 text-[10px] font-bold", fr.tag === "INITIATIVE" ? "bg-navy-800 text-white" : "bg-navy-100 text-navy-700")}>
-                                {fr.tag}
-                              </span>
-                            )}
-                            {fr.name}
-                            {fr.adpCode && <span className="ml-1.5 text-[11px] text-slate-400">#{fr.adpCode}</span>}
-                          </div>
-                          <div className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-400">
-                            {fr.computed ? (
-                              <span className="italic">auto-computed from its {fr.schemeCount} scheme{fr.schemeCount === 1 ? "" : "s"} — no entry needed here</span>
-                            ) : (
-                              fr.prev && (
-                                <>was {fr.prev.physicalProgressPct ?? "—"}% on {new Date(fr.prev.reportDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}</>
-                              )
-                            )}
-                            {fr.entityType === "SCHEME" && (
-                              <button
-                                className="font-semibold text-navy-500 hover:text-navy-700 hover:underline"
-                                onClick={() => setAddFor({ schemeId: fr.entityId, schemeName: fr.name })}
-                              >
-                                + Add work item
-                              </button>
-                            )}
-                            {schemeWithSubs && <span className="italic">% rolls up from work items</span>}
-                          </div>
+                  <tr key={fr.key} className={cn("group/row", dirty && "bg-amber-50/40", isInit && !dirty && "bg-navy-50/30")}>
+                    {/* Name (frozen) */}
+                    <td className={cn("grid-td sticky left-0 z-10 shadow-[2px_0_4px_-2px_rgba(11,74,104,0.12)]", nameBg)}>
+                      <div className={cn("px-3 py-2", fr.isSub && "pl-8")}>
+                        <div className={cn("truncate text-[13px] font-medium leading-tight", isInit ? "text-navy-800" : fr.isSub ? "text-slate-600" : "text-slate-900")} title={fr.name}>
+                          {fr.isSub && <span className="mr-1.5 text-navy-300">└</span>}
+                          {fr.tag === "INITIATIVE" && <span className="mr-1.5 rounded bg-navy-600 px-1 py-px text-[9px] font-bold text-white">INITIATIVE</span>}
+                          {fr.tag === "PRP" && <span className="mr-1.5 rounded bg-navy-50 px-1 py-px text-[9px] font-bold text-navy-600 ring-1 ring-navy-200">PRP</span>}
+                          {fr.name}
+                        </div>
+                        <div className="mt-0.5 flex items-center gap-2 whitespace-nowrap text-[10.5px] text-slate-400">
+                          {fr.adpCode && <span className="font-medium text-slate-400">#{fr.adpCode}</span>}
+                          {fr.computed ? (
+                            <span>auto from {fr.schemeCount} scheme{fr.schemeCount === 1 ? "" : "s"}</span>
+                          ) : fr.prev ? (
+                            <span>
+                              was {fr.prev.physicalProgressPct ?? "—"}% · {new Date(fr.prev.reportDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
+                            </span>
+                          ) : null}
+                          {schemeWithSubs && <span>rolls up</span>}
+                          {fr.entityType === "SCHEME" && (
+                            <button
+                              className="font-semibold text-navy-500 opacity-0 transition-opacity hover:underline group-hover/row:opacity-100"
+                              onClick={() => setAddFor({ schemeId: fr.entityId, schemeName: fr.name })}
+                            >
+                              + work item
+                            </button>
+                          )}
                         </div>
                       </div>
                     </td>
-                    <td className="border-l border-slate-100 p-0">
+                    {/* Phase */}
+                    <td className="grid-td">
                       {locked ? (
-                        <div className="cell flex cursor-not-allowed items-center text-slate-300">—</div>
+                        <div className="cell flex items-center justify-center" aria-disabled>—</div>
                       ) : (
                         <select className="cell" value={d.phase} onChange={(e) => set(fr.key, "phase", e.target.value)}>
-                          <option value="">{fr.prev?.phase ? `(${fr.prev.phase})` : "— select phase —"}</option>
+                          <option value="">{fr.prev?.phase ? `(${fr.prev.phase})` : "select…"}</option>
                           {PHASES.map((p) => (
-                            <option key={p} value={p}>
-                              {p}
-                            </option>
+                            <option key={p} value={p}>{p}</option>
                           ))}
                         </select>
                       )}
                     </td>
-                    <td className="w-24 border-l border-slate-100 p-0">
+                    {/* % */}
+                    <td className="grid-td">
                       {fr.computed ? (
-                        <div className="cell flex items-center justify-end gap-1 font-bold text-navy-700">
-                          {fmtPct(fr.rolledPhysical)} <span className="text-[9px] font-semibold text-slate-400">AUTO</span>
+                        <div className="flex h-10 items-center justify-end gap-1 px-2.5 text-[13px] font-bold text-navy-700">
+                          {fmtPct(fr.rolledPhysical)}
+                          <span className="text-[8px] font-bold tracking-wide text-slate-400">AUTO</span>
                         </div>
                       ) : (
-                        cellTyped(fr, "physicalProgressPct", "pct", {
-                          placeholder: prevPct != null ? String(prevPct) : "0–100",
-                          disabled: schemeWithSubs,
-                        })
+                        cellTyped(fr, "physicalProgressPct", "pct", { placeholder: prevPct != null ? String(prevPct) : "0–100", disabled: schemeWithSubs })
                       )}
                     </td>
-                    <td className="w-20 border-l border-slate-100 text-center">
-                      <Delta value={locked ? null : delta} />
+                    {/* Δ */}
+                    <td className="grid-td text-center"><Delta value={locked ? null : delta} /></td>
+                    {/* Work */}
+                    <td className="grid-td">
+                      <input className="cell" value={d.narrative} placeholder={fr.computed ? "" : "today's work…"} onChange={(e) => set(fr.key, "narrative", e.target.value)} disabled={fr.computed} />
                     </td>
-                    <td className="border-l border-slate-100 p-0">
-                      <input
-                        className={cn("cell", fr.computed && "cursor-not-allowed")}
-                        value={d.narrative}
-                        placeholder={fr.computed ? "—" : "what moved on ground today…"}
-                        onChange={(e) => set(fr.key, "narrative", e.target.value)}
-                        disabled={fr.computed}
-                      />
-                    </td>
-                    <td className="w-24 border-l border-slate-100 p-0">{cellTyped(fr, "manpower", "int", { placeholder: fr.prev?.manpower?.toString(), disabled: locked })}</td>
-                    <td className="w-24 border-l border-slate-100 p-0">{cellTyped(fr, "machinery", "int", { placeholder: fr.prev?.machinery?.toString(), disabled: locked })}</td>
-                    <td className="w-32 border-l border-slate-100 p-0">
+                    <td className="grid-td">{cellTyped(fr, "manpower", "int", { placeholder: fr.prev?.manpower?.toString(), disabled: locked })}</td>
+                    <td className="grid-td">{cellTyped(fr, "machinery", "int", { placeholder: fr.prev?.machinery?.toString(), disabled: locked })}</td>
+                    {/* Status */}
+                    <td className="grid-td">
                       {locked ? (
-                        <div className="cell flex cursor-not-allowed items-center text-slate-300">auto</div>
+                        <div className="cell flex items-center justify-center" aria-disabled>—</div>
                       ) : (
                         <select className="cell" value={d.siteStatus} onChange={(e) => set(fr.key, "siteStatus", e.target.value)}>
-                          <option value="">{fr.prev ? `(${fr.prev.siteStatus.replace(/_/g, " ").toLowerCase()})` : "auto from %"}</option>
+                          <option value="">{fr.prev ? `(${fr.prev.siteStatus.replace(/_/g, " ").toLowerCase()})` : "auto"}</option>
                           {SITE_STATUSES.map((s) => (
-                            <option key={s.value} value={s.value}>
-                              {s.label}
-                            </option>
+                            <option key={s.value} value={s.value}>{s.label}</option>
                           ))}
                         </select>
                       )}
                     </td>
-                    <td className="border-l border-slate-100 p-0">
-                      <input
-                        className={cn("cell", fr.computed && "cursor-not-allowed")}
-                        value={d.bottlenecks}
-                        placeholder={fr.computed ? "—" : "blocker / decision needed"}
-                        onChange={(e) => set(fr.key, "bottlenecks", e.target.value)}
-                        disabled={fr.computed}
-                      />
+                    <td className="grid-td">
+                      <input className="cell" value={d.bottlenecks} placeholder={fr.computed ? "" : "issues…"} onChange={(e) => set(fr.key, "bottlenecks", e.target.value)} disabled={fr.computed} />
                     </td>
-                    <td className="border-l border-slate-100 p-0">
-                      <input
-                        className={cn("cell", fr.computed && "cursor-not-allowed")}
-                        value={d.remarks}
-                        placeholder={fr.computed ? "—" : "any other details…"}
-                        onChange={(e) => set(fr.key, "remarks", e.target.value)}
-                        disabled={fr.computed}
-                      />
+                    <td className="grid-td">
+                      <input className="cell" value={d.remarks} placeholder={fr.computed ? "" : "details…"} onChange={(e) => set(fr.key, "remarks", e.target.value)} disabled={fr.computed} />
                     </td>
-                    <td className="w-24 border-l border-slate-100 p-0">
-                      {fr.entityType === "SCHEME" ? cellTyped(fr, "fundsReleased", "money", { placeholder: fr.prev?.fundsReleased?.toString() }) : <div className="cell cursor-not-allowed text-center text-slate-300">—</div>}
+                    <td className="grid-td">
+                      {fr.entityType === "SCHEME" ? cellTyped(fr, "fundsReleased", "money", { placeholder: fr.prev?.fundsReleased?.toString() }) : <div className="cell flex items-center justify-center" aria-disabled>—</div>}
                     </td>
-                    <td className="w-24 border-l border-slate-100 p-0">
-                      {fr.entityType === "SCHEME" ? cellTyped(fr, "expenditure", "money", { placeholder: fr.prev?.expenditure?.toString() }) : <div className="cell cursor-not-allowed text-center text-slate-300">—</div>}
+                    <td className="grid-td">
+                      {fr.entityType === "SCHEME" ? cellTyped(fr, "expenditure", "money", { placeholder: fr.prev?.expenditure?.toString() }) : <div className="cell flex items-center justify-center" aria-disabled>—</div>}
                     </td>
-                    <td className="w-10 text-center">
-                      {fr.computed ? <span className="text-[10px] font-bold text-slate-400">AUTO</span> : saved ? <span className="text-emerald-600">✓</span> : dirty ? <span className="text-amber-500">●</span> : fr.today ? <span className="text-navy-400">✓</span> : <span className="text-slate-300">—</span>}
+                    <td className="grid-td !border-r-0 text-center">
+                      {fr.computed ? (
+                        <span className="text-[9px] font-bold text-slate-300">AUTO</span>
+                      ) : saved ? (
+                        <span className="font-bold text-emerald-600">✓</span>
+                      ) : dirty ? (
+                        <span className="text-amber-500">●</span>
+                      ) : fr.today ? (
+                        <span className="text-navy-400">✓</span>
+                      ) : (
+                        <span className="text-slate-200">—</span>
+                      )}
                     </td>
                   </tr>
                 );
@@ -452,15 +443,11 @@ export default function Entry() {
             </tbody>
           </table>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 bg-slate-50 px-4 py-2.5 text-[11px] text-slate-500">
-          <div>
-            <span className="mr-4">● unsaved</span>
-            <span className="mr-4 text-emerald-600">✓ saved</span>
-            <span>
-              % is cumulative · Δ, Financial %, Site Status and Lifecycle stage are derived automatically (entering
-              progress marks a scheme Started; 100% marks it Completed) · initiative &amp; scheme rows with children are
-              AUTO — fill only the lowest level.
-            </span>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 bg-white px-4 py-2 text-[11px] text-slate-400">
+          <div className="flex items-center gap-4">
+            <span><span className="text-amber-500">●</span> unsaved</span>
+            <span><span className="font-bold text-emerald-600">✓</span> saved</span>
+            <span><span className="font-bold text-slate-300">AUTO</span> computed — fill the lowest level only</span>
           </div>
           <div>
             {rows.length} rows · {dirtyKeys.length} unsaved
