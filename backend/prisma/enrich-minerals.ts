@@ -15,7 +15,7 @@ dotenv.config({ path: path.join(__dirname, "..", ".env") });
 const prisma = new PrismaClient();
 
 const SCHEME_RAW =
-  "Establishment & Operationalization of KP Minerals Development and Management Company Ltd (KPMDMCL)";
+  "Establishment & Operationalization of Khyber Pakhtunkhwa Minerals Development and Management Company Ltd (KPMDMCL)";
 
 const WORK_ITEMS: { name: string; description: string }[] = [
   {
