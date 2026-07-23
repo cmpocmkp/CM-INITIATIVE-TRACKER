@@ -28,8 +28,8 @@ export default function Login() {
     <div className="flex min-h-screen items-center justify-center bg-white px-4">
       <div className="relative w-full max-w-md">
         <div className="mb-7 text-center">
-          <div className="mx-auto mb-4 w-fit">
-            <Logo size={84} className="rounded-2xl" />
+          <div className="mx-auto mb-2 w-fit">
+            <Logo size={160} className="rounded-2xl" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-navy-900">CM INITIATIVE TRACKER</h1>
           <p className="mt-1.5 text-[13px] text-slate-500">
