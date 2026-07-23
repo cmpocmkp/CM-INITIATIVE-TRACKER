@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, fmtDate } from "../api";
+import { api, CorrectionRequest, fmtDate } from "../api";
 import { Heading, Spinner, ErrorBox } from "../ui";
 
 interface UserRow {
@@ -36,6 +36,7 @@ export default function Admin() {
   const [uEmails, setUEmails] = useState<Record<string, string>>({});
   const [uPhones, setUPhones] = useState<Record<string, string>>({});
   const [showPwd, setShowPwd] = useState(false);
+  const [corrections, setCorrections] = useState<CorrectionRequest[]>([]);
 
   function load() {
     api
@@ -54,14 +55,34 @@ export default function Admin() {
         setPhones(Object.fromEntries(d.map((x) => [x.id, x.phone ?? ""])));
       })
       .catch((e) => setErr((e as Error).message));
+    api.get<CorrectionRequest[]>("/corrections").then(setCorrections).catch(() => {});
   }
   useEffect(load, []);
 
   async function saveContact(d: DeptRow) {
     setMsg("");
+    const newEmail = (emails[d.id] ?? "").trim();
+    const emailChanged = newEmail && newEmail.toLowerCase() !== (d.email ?? "").toLowerCase();
     try {
-      await api.post(`/admin/departments/${d.id}/email`, { email: emails[d.id] ?? "", phone: phones[d.id] ?? "" });
-      setMsg(`✓ Contact saved for ${d.code}`);
+      await api.post(`/admin/departments/${d.id}/email`, { email: newEmail, phone: phones[d.id] ?? "" });
+      // New/changed email → automatically send the credentials + schemes email.
+      if (emailChanged) {
+        const r = await api.post<{ ok: boolean; sent: string[]; reason?: string }>("/digest/onboarding", { departmentIds: [d.id] });
+        setMsg(r.ok && r.sent.length ? `✓ Contact saved — credentials & scheme list emailed to ${newEmail}` : `✓ Contact saved (email not sent: ${r.reason ?? "check Gmail config"})`);
+      } else {
+        setMsg(`✓ Contact saved for ${d.code}`);
+      }
+      load();
+    } catch (e) {
+      setMsg(`✗ ${(e as Error).message}`);
+    }
+  }
+
+  async function resolveCorrection(id: string, approve: boolean) {
+    setMsg("");
+    try {
+      await api.post(`/corrections/${id}/resolve`, { approve });
+      setMsg(approve ? "✓ Correction approved — the department can now edit & save that entry once." : "✓ Correction rejected.");
       load();
     } catch (e) {
       setMsg(`✗ ${(e as Error).message}`);
@@ -121,12 +142,53 @@ export default function Admin() {
         title="Administration"
         subtitle="Department focal emails, onboarding (credentials) emails, and account passwords."
         action={
-          <button className="btn-primary" onClick={() => sendOnboarding()} disabled={busy}>
-            {busy ? "Sending…" : "✉ Send credentials to all (with email)"}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <a href="/api/admin/users/credentials.csv" download className="btn-ghost">
+              ⬇ Logins sheet (Excel)
+            </a>
+            <button className="btn-primary" onClick={() => sendOnboarding()} disabled={busy}>
+              {busy ? "Sending…" : "✉ Send credentials to all (with email)"}
+            </button>
+          </div>
         }
       />
       {msg && <div className="rounded-lg border border-navy-200 bg-navy-50 px-4 py-2.5 text-[13px] text-navy-800">{msg}</div>}
+
+      {/* Correction requests (daily-lock workflow) */}
+      {corrections.filter((c) => c.status === "PENDING").length > 0 && (
+        <div className="card overflow-hidden border-l-4 border-l-neutral-800">
+          <div className="border-b border-slate-200 px-5 py-3">
+            <h2 className="text-sm uppercase tracking-wide text-neutral-900">
+              Correction Requests — pending {corrections.filter((c) => c.status === "PENDING").length}
+            </h2>
+            <p className="mt-0.5 text-[12px] text-neutral-500">
+              Submitted daily entries are locked. Approving lets the department edit &amp; re-save that entry once.
+            </p>
+          </div>
+          <div className="divide-y divide-neutral-100">
+            {corrections
+              .filter((c) => c.status === "PENDING")
+              .map((c) => (
+                <div key={c.id} className="flex flex-wrap items-center gap-3 px-5 py-3">
+                  <span className="text-[13px] text-neutral-900">{c.department.code}</span>
+                  <span className="min-w-0 flex-1 truncate text-[13px] text-neutral-600" title={c.entityName}>
+                    {c.entityName}
+                  </span>
+                  <span className="text-[11px] text-neutral-400">{fmtDate(c.reportDate)}</span>
+                  <span className="max-w-[260px] truncate text-[12px] italic text-neutral-500" title={c.reason}>
+                    “{c.reason}”
+                  </span>
+                  <button className="btn-primary px-3 py-1 text-xs" onClick={() => resolveCorrection(c.id, true)}>
+                    Approve
+                  </button>
+                  <button className="btn-ghost px-3 py-1 text-xs" onClick={() => resolveCorrection(c.id, false)}>
+                    Reject
+                  </button>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
 
       <div className="card overflow-hidden">
         <div className="border-b border-slate-200 px-5 py-3">

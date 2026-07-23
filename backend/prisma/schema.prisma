@@ -39,6 +39,36 @@ enum SiteStatus {
   COMPLETED
 }
 
+// Correction workflow: a day's submission is LOCKED once saved; changing it
+// requires a department request approved by the CM Office (superadmin/admin).
+enum CorrectionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+model CorrectionRequest {
+  id            String           @id @default(cuid())
+  entityType    String // SCHEME | INITIATIVE | SUBPROJECT
+  entityId      String
+  entityName    String // snapshot for display
+  reportDate    DateTime // the locked day being corrected
+  departmentId  String
+  department    Department       @relation(fields: [departmentId], references: [id])
+  requestedById String
+  requestedBy   User             @relation("CorrectionRequester", fields: [requestedById], references: [id])
+  reason        String
+  status        CorrectionStatus @default(PENDING)
+  resolvedById  String?
+  resolvedBy    User?            @relation("CorrectionResolver", fields: [resolvedById], references: [id])
+  resolvedAt    DateTime?
+  createdAt     DateTime         @default(now())
+
+  @@index([status])
+  @@index([entityType, entityId, reportDate])
+}
+
 // A Department is also a Sector (same dimension).
 model Department {
   id             String       @id @default(cuid())
@@ -50,9 +80,10 @@ model Department {
   isSector       Boolean      @default(true) // has ADP schemes attached
   createdAt      DateTime     @default(now())
 
-  users          User[]
-  schemes        Scheme[]     @relation("SchemeDepartment")
-  ledInitiatives Initiative[] @relation("InitiativeLead")
+  users              User[]
+  schemes            Scheme[]            @relation("SchemeDepartment")
+  ledInitiatives     Initiative[]        @relation("InitiativeLead")
+  correctionRequests CorrectionRequest[]
 }
 
 model User {
@@ -69,7 +100,9 @@ model User {
   createdAt    DateTime  @default(now())
   lastLoginAt  DateTime?
 
-  progressUpdates ProgressUpdate[]
+  progressUpdates      ProgressUpdate[]
+  correctionsRequested CorrectionRequest[] @relation("CorrectionRequester")
+  correctionsResolved  CorrectionRequest[] @relation("CorrectionResolver")
 }
 
 // One of the 21 CM focus initiatives.

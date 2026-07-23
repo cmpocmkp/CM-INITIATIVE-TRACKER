@@ -154,7 +154,11 @@ export class DigestService {
     const where = deptIds && deptIds.length ? { id: { in: deptIds } } : {};
     const depts = await this.prisma.department.findMany({
       where,
-      include: { _count: { select: { schemes: true } } },
+      include: {
+        _count: { select: { schemes: true } },
+        schemes: { select: { name: true, adpCode: true }, orderBy: { name: "asc" }, take: 25 },
+        ledInitiatives: { select: { number: true, name: true, _count: { select: { schemes: true } } } },
+      },
       orderBy: { name: "asc" },
     });
     const appUrl = process.env.APP_URL || "#";
@@ -200,9 +204,28 @@ export class DigestService {
       <tr><td style="padding:6px 14px;border:1px solid #e5eaf0;background:#f8fafc;">Username</td><td style="padding:6px 14px;border:1px solid #e5eaf0;"><b>${dept.code}</b></td></tr>
       <tr><td style="padding:6px 14px;border:1px solid #e5eaf0;background:#f8fafc;">Password</td><td style="padding:6px 14px;border:1px solid #e5eaf0;"><b>${defaultPwd}</b> <span style="color:#64748b;">(please change after first login)</span></td></tr>
     </table>
+    ${
+      dept.schemes.length
+        ? `<div style="margin:12px 0;padding:10px 14px;background:#f8fafc;border:1px solid #e5eaf0;border-radius:8px;">
+            <div style="font-size:12px;font-weight:600;color:#334155;margin-bottom:6px;">Your schemes on the platform:</div>
+            <ol style="margin:0;padding-left:18px;font-size:12px;color:#475569;line-height:1.7;">
+              ${dept.schemes.map((s) => `<li>${s.adpCode ? `<b>${s.adpCode}</b> — ` : ""}${s.name}</li>`).join("")}
+            </ol>
+            ${dept._count.schemes > 25 ? `<div style="font-size:11px;color:#94a3b8;margin-top:4px;">…and ${dept._count.schemes - 25} more in the app.</div>` : ""}
+          </div>`
+        : ""
+    }
+    ${
+      dept.ledInitiatives.filter((i) => i._count.schemes === 0).length
+        ? `<p style="font-size:12px;color:#475569;">You also report directly on: ${dept.ledInitiatives
+            .filter((i) => i._count.schemes === 0)
+            .map((i) => `<b>Initiative #${i.number} — ${i.name}</b>`)
+            .join(", ")}.</p>`
+        : ""
+    }
     <p><b>Every day:</b> open <a href="${appUrl}/entry">Daily Data Entry</a> and fill, for each scheme / work item:
     current phase, % complete from start, work done today, manpower &amp; machinery on site, site status, and any issues needing decisions.
-    Figures are cumulative; the system computes the daily increase itself.</p>
+    Figures are cumulative; the system computes the daily increase itself. <b>Once saved, the day's entry locks</b> — corrections go through a request to the CM Office inside the app.</p>
     <p>You can add work items (e.g. individual underpasses) under any scheme with <b>+ Add work item</b>.</p>
     <p style="font-size:12px;color:#64748b;">A reminder is sent each morning if the day's entry is pending. Your data is visible only to your department and the CM Office.</p>
   </div>

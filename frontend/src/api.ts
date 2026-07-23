@@ -169,6 +169,8 @@ export interface Dashboard {
   today: string;
 }
 
+export type CorrectionStatus = "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED";
+
 export interface SheetSubRow {
   entityType: "SUBPROJECT";
   entityId: string;
@@ -177,6 +179,23 @@ export interface SheetSubRow {
   targetDate: string | null;
   today: Update | null;
   prev: Update | null;
+  locked?: boolean;
+  correction?: CorrectionStatus | null;
+}
+
+export interface CorrectionRequest {
+  id: string;
+  entityType: "SCHEME" | "INITIATIVE" | "SUBPROJECT";
+  entityId: string;
+  entityName: string;
+  reportDate: string;
+  reason: string;
+  status: CorrectionStatus;
+  createdAt: string;
+  resolvedAt: string | null;
+  department: { code: string; name: string };
+  requestedBy: { username: string } | null;
+  resolvedBy: { username: string } | null;
 }
 
 export interface SheetRow {
@@ -195,6 +214,8 @@ export interface SheetRow {
   initiative?: { id: string; number: number; shortName: string } | null;
   today: Update | null;
   prev: Update | null;
+  locked?: boolean;
+  correction?: CorrectionStatus | null;
   subRows: SheetSubRow[];
 }
 

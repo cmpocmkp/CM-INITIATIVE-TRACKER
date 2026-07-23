@@ -37,3 +37,6 @@ ADP_2026-27_FINAL_VERSION.pdf
 
 # ts incremental build info
 *.tsbuildinfo
+
+# credentials sheet — never commit
+CM-Tracker-Logins.xlsx

@@ -381,6 +381,20 @@ export class CoreService {
       if (!prevMap.has(k)) prevMap.set(k, u); // first = latest before date
     }
 
+    // Correction state for this date (submitted rows are locked for departments)
+    const corrections = user.departmentId
+      ? await this.prisma.correctionRequest.findMany({
+          where: { departmentId: user.departmentId, reportDate: date, status: { in: ["PENDING", "APPROVED"] } },
+          select: { entityType: true, entityId: true, status: true },
+        })
+      : [];
+    const corrMap = new Map(corrections.map((c) => [`${c.entityType}:${c.entityId}`, c.status]));
+    const staffUser = isStaff(user);
+    const lockInfo = (key: string) => ({
+      locked: !staffUser && todayMap.has(key) && corrMap.get(key) !== "APPROVED",
+      correction: corrMap.get(key) ?? null,
+    });
+
     const initiativeRows = initiatives.map((i) => {
       // Weighted rollup across the initiative's schemes (all departments).
       let w = 0;
@@ -406,6 +420,7 @@ export class CoreService {
         rolledPhysical: hasSchemes && w ? acc / w : null,
         today: todayMap.get(`INITIATIVE:${i.id}`) ?? null,
         prev: prevMap.get(`INITIATIVE:${i.id}`) ?? null,
+        ...lockInfo(`INITIATIVE:${i.id}`),
         subRows: [] as unknown[],
       };
     });
@@ -422,6 +437,7 @@ export class CoreService {
       initiative: s.initiative,
       today: todayMap.get(`SCHEME:${s.id}`) ?? null,
       prev: prevMap.get(`SCHEME:${s.id}`) ?? null,
+      ...lockInfo(`SCHEME:${s.id}`),
       subRows: s.subProjects.map((sp) => ({
         entityType: "SUBPROJECT" as const,
         entityId: sp.id,
@@ -430,6 +446,7 @@ export class CoreService {
         targetDate: sp.targetDate,
         today: todayMap.get(`SUBPROJECT:${sp.id}`) ?? null,
         prev: prevMap.get(`SUBPROJECT:${sp.id}`) ?? null,
+        ...lockInfo(`SUBPROJECT:${sp.id}`),
       })),
     }));
 
@@ -461,6 +478,8 @@ export class CoreService {
     let saved = 0;
     const errors: string[] = [];
     const touchedSchemes = new Set<string>(); // for auto lifecycle-stage sync
+    const staffUser = isStaff(user);
+    const consumedCorrections: string[] = [];
 
     for (const e of entries) {
       try {
@@ -469,6 +488,31 @@ export class CoreService {
         if (e.entityType === "INITIATIVE" && (myInit.get(e.entityId) ?? 0) > 0)
           throw new Error("auto-computed from its schemes — update the schemes instead");
         if (e.entityType === "SUBPROJECT" && !mySub.has(e.entityId)) throw new Error("not your work item");
+
+        // ── Daily lock: once submitted, a department's entry for the day is
+        // frozen; editing needs an APPROVED correction from the CM Office.
+        if (!staffUser) {
+          const existingWhere =
+            e.entityType === "SCHEME"
+              ? { schemeId: e.entityId, reportDate: date }
+              : e.entityType === "INITIATIVE"
+                ? { initiativeId: e.entityId, reportDate: date }
+                : { subProjectId: e.entityId, reportDate: date };
+          const already = await this.prisma.progressUpdate.findFirst({ where: existingWhere, select: { id: true } });
+          if (already) {
+            const approval = await this.prisma.correctionRequest.findFirst({
+              where: {
+                entityType: e.entityType,
+                entityId: e.entityId,
+                reportDate: date,
+                departmentId: user.departmentId ?? "___none___",
+                status: "APPROVED",
+              },
+            });
+            if (!approval) throw new Error("locked — today's entry is submitted; request a correction from the CM Office");
+            consumedCorrections.push(approval.id);
+          }
+        }
 
         const isScheme = e.entityType === "SCHEME";
         const phys = pctOrNull(e.physicalProgressPct);
@@ -556,7 +600,92 @@ export class CoreService {
       }
     }
 
+    // An approved correction is single-use: consumed by the successful re-save.
+    if (consumedCorrections.length) {
+      await this.prisma.correctionRequest.updateMany({
+        where: { id: { in: consumedCorrections } },
+        data: { status: "COMPLETED" },
+      });
+    }
+
     return { ok: errors.length === 0, saved, errors };
+  }
+
+  // ── Correction workflow ──────────────────────────────────────
+  async requestCorrection(
+    user: SessionUser,
+    body: { entityType?: EntityType; entityId?: string; reason?: string; date?: string },
+  ) {
+    const entityType = body.entityType;
+    const entityId = (body.entityId || "").trim();
+    const reason = (body.reason || "").trim();
+    if (!entityType || !["SCHEME", "INITIATIVE", "SUBPROJECT"].includes(entityType) || !entityId)
+      throw new BadRequestException("entityType and entityId are required");
+    if (reason.length < 5) throw new BadRequestException("Please give a short reason for the correction");
+    if (!user.departmentId) throw new ForbiddenException("Only department accounts request corrections");
+    const date = body.date ? dateOnly(body.date) : dateOnly();
+
+    // Ownership + display name
+    let entityName = "";
+    if (entityType === "SCHEME") {
+      const s = await this.prisma.scheme.findUnique({ where: { id: entityId }, select: { name: true, departmentId: true } });
+      if (!s || s.departmentId !== user.departmentId) throw new ForbiddenException("Not your scheme");
+      entityName = s.name;
+    } else if (entityType === "SUBPROJECT") {
+      const sp = await this.prisma.subProject.findUnique({ where: { id: entityId }, include: { scheme: { select: { departmentId: true, name: true } } } });
+      if (!sp || sp.scheme.departmentId !== user.departmentId) throw new ForbiddenException("Not your work item");
+      entityName = `${sp.name} (${sp.scheme.name.slice(0, 40)})`;
+    } else {
+      const i = await this.prisma.initiative.findUnique({ where: { id: entityId }, select: { name: true, leadDepartmentId: true } });
+      if (!i || i.leadDepartmentId !== user.departmentId) throw new ForbiddenException("Not your initiative");
+      entityName = i.name;
+    }
+
+    const open = await this.prisma.correctionRequest.findFirst({
+      where: { entityType, entityId, reportDate: date, status: { in: ["PENDING", "APPROVED"] } },
+    });
+    if (open) return { ok: true, id: open.id, status: open.status, note: "request already open" };
+
+    const rec = await this.prisma.correctionRequest.create({
+      data: {
+        entityType,
+        entityId,
+        entityName: entityName.slice(0, 300),
+        reportDate: date,
+        departmentId: user.departmentId,
+        requestedById: user.userId,
+        reason: reason.slice(0, 1000),
+      },
+    });
+    return { ok: true, id: rec.id, status: rec.status };
+  }
+
+  async listCorrections(user: SessionUser) {
+    const where: Prisma.CorrectionRequestWhereInput = isStaff(user)
+      ? {}
+      : { departmentId: user.departmentId ?? "___none___" };
+    return this.prisma.correctionRequest.findMany({
+      where,
+      orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+      take: 200,
+      include: {
+        department: { select: { code: true, name: true } },
+        requestedBy: { select: { username: true } },
+        resolvedBy: { select: { username: true } },
+      },
+    });
+  }
+
+  async resolveCorrection(user: SessionUser, id: string, approve: boolean) {
+    if (!isStaff(user)) throw new ForbiddenException("Only the CM Office resolves corrections");
+    const rec = await this.prisma.correctionRequest.findUnique({ where: { id } });
+    if (!rec) throw new NotFoundException("Request not found");
+    if (rec.status !== "PENDING") throw new BadRequestException(`Already ${rec.status.toLowerCase()}`);
+    await this.prisma.correctionRequest.update({
+      where: { id },
+      data: { status: approve ? "APPROVED" : "REJECTED", resolvedById: user.userId, resolvedAt: new Date() },
+    });
+    return { ok: true, status: approve ? "APPROVED" : "REJECTED" };
   }
 
   // ── Dashboard rollups ────────────────────────────────────────

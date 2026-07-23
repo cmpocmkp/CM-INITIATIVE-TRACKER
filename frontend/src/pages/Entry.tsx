@@ -88,6 +88,8 @@ type FlatRow = {
   parentSchemeId?: string;
   today: Update | null;
   prev: Update | null;
+  dayLocked: boolean; // submitted for today → frozen until correction approved
+  correction: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED" | null;
 };
 
 function flatten(rows: SheetRow[]): FlatRow[] {
@@ -108,6 +110,8 @@ function flatten(rows: SheetRow[]): FlatRow[] {
       isSub: false,
       today: r.today,
       prev: r.prev,
+      dayLocked: !!r.locked,
+      correction: r.correction ?? null,
     });
     for (const s of r.subRows) {
       out.push({
@@ -124,6 +128,8 @@ function flatten(rows: SheetRow[]): FlatRow[] {
         parentSchemeId: r.entityId,
         today: s.today,
         prev: s.prev,
+        dayLocked: !!s.locked,
+        correction: s.correction ?? null,
       });
     }
   }
@@ -142,6 +148,8 @@ export default function Entry() {
   const [notice, setNotice] = useState("");
   const [addFor, setAddFor] = useState<{ schemeId: string; schemeName: string } | null>(null);
   const [newSub, setNewSub] = useState({ name: "", weight: "", targetDate: "" });
+  const [corrFor, setCorrFor] = useState<FlatRow | null>(null);
+  const [corrReason, setCorrReason] = useState("");
 
   const rows = useMemo(() => (sheet ? flatten(sheet) : []), [sheet]);
 
@@ -224,6 +232,19 @@ export default function Entry() {
       setErr((e as Error).message);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function submitCorrection() {
+    if (!corrFor || corrReason.trim().length < 5) return;
+    try {
+      await api.post("/corrections", { entityType: corrFor.entityType, entityId: corrFor.entityId, reason: corrReason.trim() });
+      setCorrFor(null);
+      setCorrReason("");
+      setNotice("Correction request sent to the CM Office — the row unlocks once approved.");
+      await load();
+    } catch (e) {
+      setErr((e as Error).message);
     }
   }
 
@@ -334,7 +355,9 @@ export default function Entry() {
                 const saved = savedKeys.has(fr.key);
                 const isInit = fr.entityType === "INITIATIVE";
                 const schemeWithSubs = fr.entityType === "SCHEME" && fr.hasSubs;
-                const locked = schemeWithSubs || fr.computed;
+                const rowAuto = schemeWithSubs || fr.computed;
+                const frozen = fr.dayLocked; // today's entry submitted → read-only
+                const locked = rowAuto || frozen;
                 const prevPct = fr.prev?.physicalProgressPct ?? null;
                 const typedPct = d.physicalProgressPct === "" ? (fr.today?.physicalProgressPct ?? null) : Number(d.physicalProgressPct);
                 const delta = fmtDelta(typedPct, prevPct);
@@ -361,7 +384,14 @@ export default function Entry() {
                             </span>
                           ) : null}
                           {schemeWithSubs && <span>rolls up</span>}
-                          {fr.entityType === "SCHEME" && (
+                          {frozen && fr.correction !== "PENDING" && (
+                            <button className="font-medium text-neutral-700 hover:underline" onClick={() => { setCorrFor(fr); setCorrReason(""); }}>
+                              🔒 request correction
+                            </button>
+                          )}
+                          {fr.correction === "PENDING" && <span className="text-neutral-500">correction pending with CM Office…</span>}
+                          {fr.correction === "APPROVED" && !frozen && <span className="text-neutral-800">✎ correction approved — edit &amp; save (one time)</span>}
+                          {fr.entityType === "SCHEME" && !frozen && (
                             <button
                               className="font-semibold text-navy-500 opacity-0 transition-opacity hover:underline group-hover/row:opacity-100"
                               onClick={() => setAddFor({ schemeId: fr.entityId, schemeName: fr.name })}
@@ -375,7 +405,9 @@ export default function Entry() {
                     {/* Phase */}
                     <td className="grid-td">
                       {locked ? (
-                        <div className="cell flex items-center justify-center" aria-disabled>—</div>
+                        <div className="cell flex items-center text-[12px]" aria-disabled>
+                          {frozen ? fr.today?.phase ?? "—" : "—"}
+                        </div>
                       ) : (
                         <select className="cell" value={d.phase} onChange={(e) => set(fr.key, "phase", e.target.value)}>
                           <option value="">{fr.prev?.phase ? `(${fr.prev.phase})` : "select…"}</option>
@@ -393,21 +425,23 @@ export default function Entry() {
                           <span className="text-[8px] font-bold tracking-wide text-slate-400">AUTO</span>
                         </div>
                       ) : (
-                        cellTyped(fr, "physicalProgressPct", "pct", { placeholder: prevPct != null ? String(prevPct) : "0–100", disabled: schemeWithSubs })
+                        cellTyped(fr, "physicalProgressPct", "pct", { placeholder: prevPct != null ? String(prevPct) : "0–100", disabled: schemeWithSubs || frozen })
                       )}
                     </td>
                     {/* Δ */}
                     <td className="grid-td text-center"><Delta value={locked ? null : delta} /></td>
                     {/* Work */}
                     <td className="grid-td">
-                      <input className="cell" value={d.narrative} placeholder={fr.computed ? "" : "today's work…"} onChange={(e) => set(fr.key, "narrative", e.target.value)} disabled={fr.computed} />
+                      <input className="cell" value={d.narrative} placeholder={fr.computed || frozen ? "" : "today's work…"} onChange={(e) => set(fr.key, "narrative", e.target.value)} disabled={fr.computed || frozen} />
                     </td>
                     <td className="grid-td">{cellTyped(fr, "manpower", "int", { placeholder: fr.prev?.manpower?.toString(), disabled: locked })}</td>
                     <td className="grid-td">{cellTyped(fr, "machinery", "int", { placeholder: fr.prev?.machinery?.toString(), disabled: locked })}</td>
                     {/* Status */}
                     <td className="grid-td">
                       {locked ? (
-                        <div className="cell flex items-center justify-center" aria-disabled>—</div>
+                        <div className="cell flex items-center text-[12px]" aria-disabled>
+                          {frozen && fr.today ? fr.today.siteStatus.replace(/_/g, " ").toLowerCase() : "—"}
+                        </div>
                       ) : (
                         <select className="cell" value={d.siteStatus} onChange={(e) => set(fr.key, "siteStatus", e.target.value)}>
                           <option value="">{fr.prev ? `(${fr.prev.siteStatus.replace(/_/g, " ").toLowerCase()})` : "auto"}</option>
@@ -418,20 +452,22 @@ export default function Entry() {
                       )}
                     </td>
                     <td className="grid-td">
-                      <input className="cell" value={d.bottlenecks} placeholder={fr.computed ? "" : "issues…"} onChange={(e) => set(fr.key, "bottlenecks", e.target.value)} disabled={fr.computed} />
+                      <input className="cell" value={d.bottlenecks} placeholder={fr.computed || frozen ? "" : "issues…"} onChange={(e) => set(fr.key, "bottlenecks", e.target.value)} disabled={fr.computed || frozen} />
                     </td>
                     <td className="grid-td">
-                      <input className="cell" value={d.remarks} placeholder={fr.computed ? "" : "details…"} onChange={(e) => set(fr.key, "remarks", e.target.value)} disabled={fr.computed} />
+                      <input className="cell" value={d.remarks} placeholder={fr.computed || frozen ? "" : "details…"} onChange={(e) => set(fr.key, "remarks", e.target.value)} disabled={fr.computed || frozen} />
                     </td>
                     <td className="grid-td">
-                      {fr.entityType === "SCHEME" ? cellTyped(fr, "fundsReleased", "money", { placeholder: fr.prev?.fundsReleased?.toString() }) : <div className="cell flex items-center justify-center" aria-disabled>—</div>}
+                      {fr.entityType === "SCHEME" ? cellTyped(fr, "fundsReleased", "money", { placeholder: fr.prev?.fundsReleased?.toString(), disabled: frozen }) : <div className="cell flex items-center justify-center" aria-disabled>—</div>}
                     </td>
                     <td className="grid-td">
-                      {fr.entityType === "SCHEME" ? cellTyped(fr, "expenditure", "money", { placeholder: fr.prev?.expenditure?.toString() }) : <div className="cell flex items-center justify-center" aria-disabled>—</div>}
+                      {fr.entityType === "SCHEME" ? cellTyped(fr, "expenditure", "money", { placeholder: fr.prev?.expenditure?.toString(), disabled: frozen }) : <div className="cell flex items-center justify-center" aria-disabled>—</div>}
                     </td>
                     <td className="grid-td !border-r-0 text-center">
                       {fr.computed ? (
                         <span className="text-[9px] font-bold text-slate-300">AUTO</span>
+                      ) : frozen ? (
+                        <span title="Submitted — locked for today. Use 'request correction' to edit.">🔒</span>
                       ) : saved ? (
                         <span className="font-bold text-neutral-900">✓</span>
                       ) : dirty ? (
@@ -459,6 +495,34 @@ export default function Entry() {
           </div>
         </div>
       </div>
+
+      {/* Correction request modal */}
+      {corrFor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/40 p-4">
+          <div className="card w-full max-w-md p-6">
+            <h3 className="text-[15px] text-neutral-900">Request correction</h3>
+            <p className="mt-1 text-[12px] leading-relaxed text-neutral-500">
+              Today&apos;s entry for <span className="text-neutral-800">{corrFor.name}</span> is locked. Explain what
+              needs correcting — the CM Office will approve or reject; on approval you can edit and save once.
+            </p>
+            <textarea
+              className="input mt-4 h-24 resize-none"
+              placeholder="e.g. entered 45% instead of 35% by mistake…"
+              value={corrReason}
+              onChange={(e) => setCorrReason(e.target.value)}
+              autoFocus
+            />
+            <div className="mt-4 flex justify-end gap-2">
+              <button className="btn-ghost" onClick={() => setCorrFor(null)}>
+                Cancel
+              </button>
+              <button className="btn-primary" onClick={submitCorrection} disabled={corrReason.trim().length < 5}>
+                Send request
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add work item modal */}
       {addFor && (

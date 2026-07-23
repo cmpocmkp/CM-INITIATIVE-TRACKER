@@ -100,6 +100,30 @@ export class CoreController {
     return this.core.complianceAnalysis(user);
   }
 
+  // ── Daily-lock correction workflow ─────────────────────────
+  @Post("corrections")
+  requestCorrection(
+    @CurrentUser() user: SessionUser,
+    @Body() body: { entityType?: "SCHEME" | "INITIATIVE" | "SUBPROJECT"; entityId?: string; reason?: string; date?: string },
+  ) {
+    return this.core.requestCorrection(user, body ?? {});
+  }
+
+  @Get("corrections")
+  listCorrections(@CurrentUser() user: SessionUser) {
+    return this.core.listCorrections(user);
+  }
+
+  @Post("corrections/:id/resolve")
+  @Roles("SUPERADMIN", "ADMIN")
+  resolveCorrection(
+    @CurrentUser() user: SessionUser,
+    @Param("id") id: string,
+    @Body() body: { approve?: boolean },
+  ) {
+    return this.core.resolveCorrection(user, id, !!body?.approve);
+  }
+
   // ── Export ─────────────────────────────────────────────────
   @Get("export/schemes.csv")
   @Header("Content-Type", "text/csv; charset=utf-8")

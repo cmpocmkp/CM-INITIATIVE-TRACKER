@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Param, Post } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, Header, Param, Post } from "@nestjs/common";
 import * as bcrypt from "bcryptjs";
 import { PrismaService } from "../prisma.service";
 import { Roles } from "../auth/decorators";
@@ -34,6 +34,34 @@ export class AdminController {
     const passwordHash = await bcrypt.hash(password, 10);
     await this.prisma.user.update({ where: { id }, data: { passwordHash, passwordPlain: password } });
     return { ok: true };
+  }
+
+  /** Shareable credentials sheet (CSV opens in Excel). SUPERADMIN only. */
+  @Get("users/credentials.csv")
+  @Header("Content-Type", "text/csv; charset=utf-8")
+  @Header("Content-Disposition", 'attachment; filename="cm-tracker-logins.csv"')
+  async credentialsCsv() {
+    const users = await this.prisma.user.findMany({
+      orderBy: [{ role: "asc" }, { username: "asc" }],
+      include: { department: { select: { name: true, code: true } } },
+    });
+    const esc = (s: string) => `"${(s || "").replace(/"/g, '""')}"`;
+    const url = process.env.APP_URL || "";
+    const lines = ["Username,Password,Role,Department,Email,Phone,Web Address"];
+    for (const u of users) {
+      lines.push(
+        [
+          esc(u.username),
+          esc(u.passwordPlain ?? ""),
+          esc(u.role),
+          esc(u.department?.name ?? "—"),
+          esc(u.email ?? ""),
+          esc(u.phone ?? ""),
+          esc(url),
+        ].join(","),
+      );
+    }
+    return lines.join("\r\n");
   }
 
   /** Set a user's contact details (email + phone). */
