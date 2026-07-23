@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Header, Param, Patch, Post, Query } from "@nestjs/common";
 import { SchemeStage } from "@prisma/client";
 import { CoreService, SheetEntryInput } from "./core.service";
-import { CurrentUser, SessionUser } from "../auth/decorators";
+import { CurrentUser, Roles, SessionUser } from "../auth/decorators";
 
 @Controller()
 export class CoreController {
@@ -88,9 +88,16 @@ export class CoreController {
   @Post("progress/sheet")
   saveSheet(
     @CurrentUser() user: SessionUser,
-    @Body() body: { date: string; entries: SheetEntryInput[] },
+    @Body() body: { date?: string; entries: SheetEntryInput[] },
   ) {
     return this.core.saveSheet(user, body?.date, body?.entries ?? []);
+  }
+
+  // ── Departmental performance analysis (staff) ──────────────
+  @Get("reports/analysis")
+  @Roles("SUPERADMIN", "ADMIN")
+  analysis(@CurrentUser() user: SessionUser) {
+    return this.core.complianceAnalysis(user);
   }
 
   // ── Export ─────────────────────────────────────────────────

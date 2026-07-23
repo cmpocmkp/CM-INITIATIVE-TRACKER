@@ -260,6 +260,12 @@ export class DigestService {
       .map((c: any) => c.code)
       .join(", ");
 
+    // 14-day reporting performance (fastest / slowest departments)
+    const an = await this.core.complianceAnalysis(SYSTEM_USER);
+    const perf = (r: any) => `<b>${r.code}</b> ${r.compliancePct != null ? Math.round(r.compliancePct) + "%" : "—"}`;
+    const fastestLine = an.fastest.map(perf).join(" · ");
+    const slowestLine = an.slowest.map(perf).join(" · ");
+
     return `
 <div style="font-family:Segoe UI,Arial,sans-serif;background:#f4f6f9;padding:24px;">
   <div style="max-width:720px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5eaf0;">
@@ -316,6 +322,12 @@ export class DigestService {
             </div>`
           : ""
       }
+
+      <div style="margin-top:12px;padding:10px 12px;background:#f8fafc;border:1px solid #e5eaf0;border-radius:8px;font-size:12px;color:#334155;">
+        <b>Reporting performance (last ${an.windowDays} days):</b><br/>
+        Best — ${fastestLine || "—"}<br/>
+        Weakest — ${slowestLine || "—"}
+      </div>
 
       <div style="margin-top:20px;text-align:center;">
         <a href="${process.env.APP_URL || "#"}" style="display:inline-block;background:${navy};color:#fff;text-decoration:none;padding:10px 22px;border-radius:8px;font-size:13px;font-weight:600;">Open Live Dashboard</a>

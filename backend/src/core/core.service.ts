@@ -25,10 +25,24 @@ const LIFECYCLE: SchemeStage[] = [
   "NOT_STARTED", "FEASIBILITY", "PC1_APPROVAL", "TENDERING", "EXECUTION", "COMPLETED", "ON_HOLD",
 ];
 
+/** "Now" shifted to Pakistan Standard Time (UTC+5, no DST). */
+export function pktNow(): Date {
+  return new Date(Date.now() + 5 * 60 * 60 * 1000);
+}
+
+/**
+ * Date-only (midnight UTC key). Without input → TODAY IN PAKISTAN, so at
+ * 2 AM PKT the reporting day is already the new Pakistani date regardless
+ * of the server's UTC clock.
+ */
 export function dateOnly(input?: string): Date {
-  const d = input ? new Date(input + "T00:00:00.000Z") : new Date();
-  if (isNaN(d.getTime())) throw new BadRequestException("Invalid date");
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  if (input) {
+    const d = new Date(input + "T00:00:00.000Z");
+    if (isNaN(d.getTime())) throw new BadRequestException("Invalid date");
+    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  }
+  const n = pktNow();
+  return new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate()));
 }
 
 function isStaff(user: SessionUser) {
@@ -306,7 +320,8 @@ export class CoreService {
 
   // ── Daily sheet (Excel-style, with Δ vs previous report) ─────
   async sheet(user: SessionUser, dateStr?: string) {
-    const date = dateOnly(dateStr);
+    // Departments always see today's (PKT) sheet; staff may inspect a past date.
+    const date = isStaff(user) && dateStr ? dateOnly(dateStr) : dateOnly();
 
     const schemes = await this.prisma.scheme.findMany({
       where: this.schemeScope(user),
@@ -421,10 +436,11 @@ export class CoreService {
     return { date: date.toISOString().slice(0, 10), rows: [...initiativeRows, ...schemeRows] };
   }
 
-  async saveSheet(user: SessionUser, dateStr: string, entries: SheetEntryInput[]) {
+  async saveSheet(user: SessionUser, dateStr: string | undefined, entries: SheetEntryInput[]) {
     if (!Array.isArray(entries) || !entries.length) throw new BadRequestException("No entries to save");
     if (entries.length > 1000) throw new BadRequestException("Too many entries");
-    const date = dateOnly(dateStr);
+    // Departments always report against TODAY (Pakistan time) — no date picking.
+    const date = isStaff(user) && dateStr ? dateOnly(dateStr) : dateOnly();
 
     const myschemes = await this.prisma.scheme.findMany({
       where: this.schemeScope(user),
@@ -676,6 +692,102 @@ export class CoreService {
       initiatives,
       compliance,
       today: today.toISOString().slice(0, 10),
+    };
+  }
+
+  // ── Departmental performance analysis (last 14 days, PKT) ────
+  async complianceAnalysis(_user: SessionUser) {
+    const DAYS = 14;
+    const today = dateOnly();
+    const since = new Date(today.getTime() - (DAYS - 1) * 86400000);
+
+    const depts = await this.prisma.department.findMany({
+      orderBy: { name: "asc" },
+      include: { schemes: { select: { id: true } } },
+    });
+    // Scheme-less initiatives are reported directly by their lead department.
+    const inits = await this.prisma.initiative.findMany({
+      select: { id: true, leadDepartmentId: true, _count: { select: { schemes: true } } },
+    });
+    const schemelessByDept = new Map<string, number>();
+    for (const i of inits) {
+      if (i._count.schemes === 0 && i.leadDepartmentId) {
+        schemelessByDept.set(i.leadDepartmentId, (schemelessByDept.get(i.leadDepartmentId) ?? 0) + 1);
+      }
+    }
+
+    const updates = await this.prisma.progressUpdate.findMany({
+      where: { reportDate: { gte: since } },
+      select: {
+        reportDate: true,
+        createdAt: true,
+        scheme: { select: { id: true, departmentId: true } },
+        subProject: { select: { scheme: { select: { id: true, departmentId: true } } } },
+        initiative: { select: { id: true, leadDepartmentId: true } },
+      },
+    });
+
+    type Acc = { entries: number; units: Set<string>; hourSum: number; hourN: number; lagSum: number; last: Date | null };
+    const acc = new Map<string, Acc>();
+    const get = (id: string): Acc => {
+      let a = acc.get(id);
+      if (!a) {
+        a = { entries: 0, units: new Set(), hourSum: 0, hourN: 0, lagSum: 0, last: null };
+        acc.set(id, a);
+      }
+      return a;
+    };
+
+    for (const u of updates) {
+      const sch = u.scheme ?? u.subProject?.scheme ?? null;
+      const deptId = sch?.departmentId ?? u.initiative?.leadDepartmentId ?? null;
+      if (!deptId) continue;
+      const a = get(deptId);
+      a.entries++;
+      const day = u.reportDate.toISOString().slice(0, 10);
+      const unit = sch ? `s:${sch.id}` : `i:${u.initiative!.id}`;
+      a.units.add(`${day}|${unit}`);
+      // Submission clock in PKT + filing lag vs the day being reported
+      const pkt = new Date(u.createdAt.getTime() + 5 * 3600 * 1000);
+      a.hourSum += pkt.getUTCHours() + pkt.getUTCMinutes() / 60;
+      a.hourN++;
+      const lag = Math.max(0, Math.floor((Date.UTC(pkt.getUTCFullYear(), pkt.getUTCMonth(), pkt.getUTCDate()) - u.reportDate.getTime()) / 86400000));
+      a.lagSum += lag;
+      if (!a.last || u.reportDate > a.last) a.last = u.reportDate;
+    }
+
+    const rows = depts
+      .map((d) => {
+        const unitsOwned = d.schemes.length + (schemelessByDept.get(d.id) ?? 0);
+        const a = acc.get(d.id);
+        const expected = unitsOwned * DAYS;
+        const reported = a?.units.size ?? 0;
+        const avgHour = a && a.hourN ? a.hourSum / a.hourN : null;
+        return {
+          id: d.id,
+          code: d.code,
+          name: d.name,
+          units: unitsOwned,
+          entries: a?.entries ?? 0,
+          expected,
+          reported,
+          compliancePct: expected > 0 ? (reported / expected) * 100 : null,
+          avgSubmitHourPkt: avgHour,
+          avgFilingLagDays: a && a.entries ? a.lagSum / a.entries : null,
+          lastReportDate: a?.last ?? null,
+          daysSilent: a?.last ? Math.round((today.getTime() - a.last.getTime()) / 86400000) : null,
+        };
+      })
+      .filter((r) => r.units > 0);
+
+    const ranked = [...rows].sort((x, y) => (y.compliancePct ?? -1) - (x.compliancePct ?? -1) || (x.avgSubmitHourPkt ?? 99) - (y.avgSubmitHourPkt ?? 99));
+    return {
+      windowDays: DAYS,
+      since: since.toISOString().slice(0, 10),
+      today: today.toISOString().slice(0, 10),
+      rows: ranked,
+      fastest: ranked.slice(0, 3),
+      slowest: [...ranked].reverse().slice(0, 3),
     };
   }
 

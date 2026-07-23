@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { api, PHASES, SheetRow, SiteStatus, SITE_STATUSES, Update, fmtDelta, fmtPct, todayStr } from "../api";
+import { api, PHASES, SheetRow, SiteStatus, SITE_STATUSES, Update, fmtDate, fmtDelta, fmtPct } from "../api";
 import { Heading, Spinner, ErrorBox, Delta, cn } from "../ui";
 
 // ── Typed input sanitizers (regex-enforced while typing) ──────
@@ -131,7 +131,8 @@ function flatten(rows: SheetRow[]): FlatRow[] {
 }
 
 export default function Entry() {
-  const [date, setDate] = useState(todayStr());
+  // Reporting date is fixed to TODAY in Pakistan — set by the server, never picked.
+  const [date, setDate] = useState<string>("");
   const [sheet, setSheet] = useState<SheetRow[] | null>(null);
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [baseline, setBaseline] = useState<Record<string, string>>({});
@@ -144,12 +145,12 @@ export default function Entry() {
 
   const rows = useMemo(() => (sheet ? flatten(sheet) : []), [sheet]);
 
-  async function load(d: string) {
+  async function load() {
     setSheet(null);
     setErr("");
     setSavedKeys(new Set());
     try {
-      const res = await api.get<{ date: string; rows: SheetRow[] }>(`/progress/sheet?date=${d}`);
+      const res = await api.get<{ date: string; rows: SheetRow[] }>("/progress/sheet");
       const dr: Record<string, Draft> = {};
       const base: Record<string, string> = {};
       for (const fr of flatten(res.rows)) {
@@ -157,6 +158,7 @@ export default function Entry() {
         dr[fr.key] = draft;
         base[fr.key] = JSON.stringify(draft);
       }
+      setDate(res.date);
       setSheet(res.rows);
       setDrafts(dr);
       setBaseline(base);
@@ -166,9 +168,9 @@ export default function Entry() {
   }
 
   useEffect(() => {
-    load(date);
+    load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [date]);
+  }, []);
 
   const dirtyKeys = useMemo(
     () => Object.keys(drafts).filter((k) => JSON.stringify(drafts[k]) !== baseline[k]),
@@ -209,7 +211,7 @@ export default function Entry() {
           expenditure: d.expenditure === "" ? null : Number(d.expenditure),
         };
       });
-      const res = await api.post<{ ok: boolean; saved: number; errors: string[] }>("/progress/sheet", { date, entries });
+      const res = await api.post<{ ok: boolean; saved: number; errors: string[] }>("/progress/sheet", { entries });
       const nb = { ...baseline };
       for (const k of dirtyKeys) nb[k] = JSON.stringify(drafts[k]);
       setBaseline(nb);
@@ -236,7 +238,7 @@ export default function Entry() {
       });
       setAddFor(null);
       setNewSub({ name: "", weight: "", targetDate: "" });
-      await load(date);
+      await load();
     } catch (e) {
       setErr((e as Error).message);
     }
@@ -275,8 +277,11 @@ export default function Entry() {
         title="Daily Data Entry"
         subtitle="Cumulative % from start — Δ, financial % and statuses compute automatically."
         action={
-          <div className="flex items-center gap-2">
-            <input type="date" className="input w-auto" value={date} max={todayStr()} onChange={(e) => setDate(e.target.value)} />
+          <div className="flex items-center gap-3">
+            <span className="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-[13px] text-neutral-700">
+              Reporting date: <span className="font-medium">{date ? fmtDate(date) : "…"}</span>
+              <span className="ml-1.5 text-[11px] text-neutral-400">(today · Pakistan)</span>
+            </span>
             <button className="btn-primary" onClick={saveAll} disabled={saving || !dirtyKeys.length}>
               {saving ? "Saving…" : `Save All${dirtyKeys.length ? ` (${dirtyKeys.length})` : ""}`}
             </button>
