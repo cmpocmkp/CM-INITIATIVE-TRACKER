@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
+import Logo from "../Logo";
 
 export default function Login() {
   const { login } = useAuth();
@@ -35,8 +36,8 @@ export default function Login() {
       />
       <div className="relative w-full max-w-md">
         <div className="mb-7 text-center text-white">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-xl font-extrabold text-navy-900 shadow-lg">
-            KP
+          <div className="mx-auto mb-4 w-fit shadow-lg">
+            <Logo size={72} className="rounded-2xl" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight">CM INITIATIVE SECTOR</h1>
           <p className="mt-1.5 text-[13px] text-white/60">

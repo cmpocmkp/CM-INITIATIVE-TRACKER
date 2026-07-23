@@ -2,6 +2,7 @@ import { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth, isStaff } from "./auth";
 import { cn } from "./ui";
+import Logo from "./Logo";
 
 const I = {
   dash: "M3 13h8V3H3v10zm10 8h8V11h-8v10zM3 21h8v-6H3v6zm10-18v6h8V3h-8z",
@@ -52,9 +53,7 @@ export default function Layout() {
   const sidebar = (
     <div className="flex h-full flex-col bg-navy-900">
       <div className="flex items-center gap-3 border-b border-white/10 px-5 py-4">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-sm font-extrabold text-navy-900">
-          KP
-        </div>
+        <Logo size={40} className="rounded-lg" />
         <div className="leading-tight">
           <div className="text-[13px] font-bold text-white">CM INITIATIVE SECTOR</div>
           <div className="text-[11px] text-white/50">Government of Khyber Pakhtunkhwa</div>
