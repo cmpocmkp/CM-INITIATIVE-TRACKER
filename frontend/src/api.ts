@@ -188,11 +188,38 @@ export interface SheetRow {
   allocation: number | null;
   isPRP: boolean;
   hasSubs: boolean;
+  /** Initiative rows only: has schemes attached → row is auto-computed, not typed. */
+  hasSchemes?: boolean;
+  schemeCount?: number;
+  rolledPhysical?: number | null;
   initiative?: { id: string; number: number; shortName: string } | null;
   today: Update | null;
   prev: Update | null;
   subRows: SheetSubRow[];
 }
+
+/** Standard physical phases — dropdown options for daily entry. */
+export const PHASES = [
+  "Survey / Design",
+  "Land Acquisition",
+  "Utilities Shifting",
+  "Mobilization",
+  "Earthwork / Excavation",
+  "Piling / Foundation",
+  "Structure / RCC",
+  "Deck / Superstructure",
+  "Backfilling",
+  "Road Works / Carpeting",
+  "Electrical / Mechanical",
+  "Finishing",
+  "Landscaping / Beautification",
+  "Testing & Commissioning",
+  "Defect Liability",
+  "Policy / Drafting",
+  "Approvals",
+  "Procurement",
+  "Implementation / Rollout",
+] as const;
 
 // ── Formatters ────────────────────────────────────────────────
 export const fmtM = (n?: number | null): string => {

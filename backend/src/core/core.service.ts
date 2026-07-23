@@ -294,9 +294,14 @@ export class CoreService {
       },
       orderBy: [{ sector: "asc" }, { name: "asc" }],
     });
+    // Led initiatives — include ALL their schemes (any dept) so the row can be
+    // auto-computed instead of asking the lead dept to type the same data twice.
     const initiatives = await this.prisma.initiative.findMany({
       where: this.initiativeScope(user),
-      include: { leadDepartment: { select: { id: true, name: true, code: true } } },
+      include: {
+        leadDepartment: { select: { id: true, name: true, code: true } },
+        schemes: { include: this.latestInclude },
+      },
       orderBy: { number: "asc" },
     });
 
@@ -338,19 +343,34 @@ export class CoreService {
       if (!prevMap.has(k)) prevMap.set(k, u); // first = latest before date
     }
 
-    const initiativeRows = initiatives.map((i) => ({
-      entityType: "INITIATIVE" as const,
-      entityId: i.id,
-      name: i.name,
-      label: `Initiative ${i.number}`,
-      adpCode: null as string | null,
-      allocation: null as number | null,
-      isPRP: false,
-      hasSubs: false,
-      today: todayMap.get(`INITIATIVE:${i.id}`) ?? null,
-      prev: prevMap.get(`INITIATIVE:${i.id}`) ?? null,
-      subRows: [] as unknown[],
-    }));
+    const initiativeRows = initiatives.map((i) => {
+      // Weighted rollup across the initiative's schemes (all departments).
+      let w = 0;
+      let acc = 0;
+      for (const s of i.schemes) {
+        const weight = (s.totalCost ?? 0) > 0 ? (s.totalCost as number) : 1;
+        w += weight;
+        acc += (effectivePhysical(s) ?? 0) * weight;
+      }
+      const hasSchemes = i.schemes.length > 0;
+      return {
+        entityType: "INITIATIVE" as const,
+        entityId: i.id,
+        name: i.name,
+        label: `Initiative ${i.number}`,
+        adpCode: null as string | null,
+        allocation: null as number | null,
+        isPRP: false,
+        hasSubs: false,
+        // Auto-computed when schemes exist — the row is then read-only.
+        hasSchemes,
+        schemeCount: i.schemes.length,
+        rolledPhysical: hasSchemes && w ? acc / w : null,
+        today: todayMap.get(`INITIATIVE:${i.id}`) ?? null,
+        prev: prevMap.get(`INITIATIVE:${i.id}`) ?? null,
+        subRows: [] as unknown[],
+      };
+    });
 
     const schemeRows = schemes.map((s) => ({
       entityType: "SCHEME" as const,
@@ -388,25 +408,27 @@ export class CoreService {
       select: { id: true, adpAllocation: true },
     });
     const myScheme = new Map(myschemes.map((s) => [s.id, s]));
-    const myInit = new Set(
-      (await this.prisma.initiative.findMany({ where: this.initiativeScope(user), select: { id: true } })).map((i) => i.id),
-    );
-    const mySub = new Set(
-      (
-        await this.prisma.subProject.findMany({
-          where: { scheme: this.schemeScope(user) },
-          select: { id: true },
-        })
-      ).map((sp) => sp.id),
-    );
+    const myInits = await this.prisma.initiative.findMany({
+      where: this.initiativeScope(user),
+      select: { id: true, _count: { select: { schemes: true } } },
+    });
+    const myInit = new Map(myInits.map((i) => [i.id, i._count.schemes]));
+    const mySubs = await this.prisma.subProject.findMany({
+      where: { scheme: this.schemeScope(user) },
+      select: { id: true, schemeId: true },
+    });
+    const mySub = new Map(mySubs.map((sp) => [sp.id, sp.schemeId]));
 
     let saved = 0;
     const errors: string[] = [];
+    const touchedSchemes = new Set<string>(); // for auto lifecycle-stage sync
 
     for (const e of entries) {
       try {
         if (e.entityType === "SCHEME" && !myScheme.has(e.entityId)) throw new Error("not your scheme");
         if (e.entityType === "INITIATIVE" && !myInit.has(e.entityId)) throw new Error("not your initiative");
+        if (e.entityType === "INITIATIVE" && (myInit.get(e.entityId) ?? 0) > 0)
+          throw new Error("auto-computed from its schemes — update the schemes instead");
         if (e.entityType === "SUBPROJECT" && !mySub.has(e.entityId)) throw new Error("not your work item");
 
         const isScheme = e.entityType === "SCHEME";
@@ -420,12 +442,16 @@ export class CoreService {
           narrative: strOrNull(e.narrative),
           manpower: intOrNull(e.manpower),
           machinery: intOrNull(e.machinery),
+          // Explicit choice wins; otherwise derive from progress: 100 → Completed,
+          // any progress → Active (no need to set it by hand every day).
           siteStatus:
             e.siteStatus && SITE_STATUSES.includes(e.siteStatus)
               ? e.siteStatus
               : phys != null && phys >= 100
                 ? ("COMPLETED" as SiteStatus)
-                : undefined,
+                : phys != null && phys > 0
+                  ? ("ACTIVE" as SiteStatus)
+                  : undefined,
           bottlenecks: strOrNull(e.bottlenecks),
           remarks: strOrNull(e.remarks),
           fundsReleased: isScheme ? numOrNull(e.fundsReleased) : null,
@@ -462,10 +488,35 @@ export class CoreService {
           },
         });
         saved++;
+        if (isScheme) touchedSchemes.add(e.entityId);
+        if (e.entityType === "SUBPROJECT") touchedSchemes.add(mySub.get(e.entityId) as string);
       } catch (err) {
         errors.push(`${e.entityType}:${e.entityId} — ${(err as Error).message}`);
       }
     }
+
+    // Auto lifecycle-stage sync: once work starts it's "started" — never ask twice.
+    //   any progress > 0  →  paper stages (Not Started / Feasibility / PC-1 / Tendering) advance to Execution
+    //   progress >= 100   →  Completed
+    // Manual states On Hold / Completed are never downgraded automatically.
+    if (touchedSchemes.size) {
+      const affected = await this.prisma.scheme.findMany({
+        where: { id: { in: [...touchedSchemes] } },
+        include: this.latestInclude,
+      });
+      for (const s of affected) {
+        const eff = effectivePhysical(s) ?? 0;
+        let next: SchemeStage | null = null;
+        if (eff >= 100 && s.stage !== "COMPLETED") next = "COMPLETED";
+        else if (
+          eff > 0 &&
+          (s.stage === "NOT_STARTED" || s.stage === "FEASIBILITY" || s.stage === "PC1_APPROVAL" || s.stage === "TENDERING")
+        )
+          next = "EXECUTION";
+        if (next) await this.prisma.scheme.update({ where: { id: s.id }, data: { stage: next } });
+      }
+    }
+
     return { ok: errors.length === 0, saved, errors };
   }
 

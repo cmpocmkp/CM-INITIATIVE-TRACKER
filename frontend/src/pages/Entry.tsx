@@ -1,6 +1,34 @@
 import { useEffect, useMemo, useState } from "react";
-import { api, SheetRow, SheetSubRow, SiteStatus, SITE_STATUSES, Update, fmtDelta, todayStr } from "../api";
+import { api, PHASES, SheetRow, SiteStatus, SITE_STATUSES, Update, fmtDelta, fmtPct, todayStr } from "../api";
 import { Heading, Spinner, ErrorBox, Delta, cn } from "../ui";
+
+// ── Typed input sanitizers (regex-enforced while typing) ──────
+const reDecimal = /[^0-9.]/g;
+const reInt = /[^0-9]/g;
+
+/** Keep only digits + a single decimal point. */
+function sanitizeDecimal(v: string): string {
+  const s = v.replace(reDecimal, "");
+  const firstDot = s.indexOf(".");
+  return firstDot === -1 ? s : s.slice(0, firstDot + 1) + s.slice(firstDot + 1).replace(/\./g, "");
+}
+function sanitizeInt(v: string): string {
+  return v.replace(reInt, "");
+}
+/** Percent: 0–100, one decimal max on blur. */
+function clampPct(v: string): string {
+  if (v === "") return "";
+  const n = Number(v);
+  if (!isFinite(n)) return "";
+  return String(Math.round(Math.max(0, Math.min(100, n)) * 10) / 10);
+}
+/** Money: 2 decimals max on blur. */
+function roundMoney(v: string): string {
+  if (v === "") return "";
+  const n = Number(v);
+  if (!isFinite(n)) return "";
+  return String(Math.round(Math.max(0, n) * 100) / 100);
+}
 
 type Draft = {
   phase: string;
@@ -53,6 +81,9 @@ type FlatRow = {
   adpCode: string | null;
   allocation: number | null;
   hasSubs: boolean; // scheme with sub-items → % is rolled up, not typed here
+  computed: boolean; // initiative with schemes → whole row auto-computed
+  schemeCount?: number;
+  rolledPhysical?: number | null;
   isSub: boolean;
   parentSchemeId?: string;
   today: Update | null;
@@ -71,6 +102,9 @@ function flatten(rows: SheetRow[]): FlatRow[] {
       adpCode: r.adpCode,
       allocation: r.allocation,
       hasSubs: r.hasSubs,
+      computed: r.entityType === "INITIATIVE" && !!r.hasSchemes,
+      schemeCount: r.schemeCount,
+      rolledPhysical: r.rolledPhysical,
       isSub: false,
       today: r.today,
       prev: r.prev,
@@ -85,6 +119,7 @@ function flatten(rows: SheetRow[]): FlatRow[] {
         adpCode: null,
         allocation: null,
         hasSubs: false,
+        computed: false,
         isSub: true,
         parentSchemeId: r.entityId,
         today: s.today,
@@ -210,16 +245,27 @@ export default function Entry() {
   if (err && !sheet) return <ErrorBox message={err} />;
   if (!sheet) return <Spinner label="Loading your data sheet…" />;
 
-  const cellNum = (fr: FlatRow, field: keyof Draft, opts?: { placeholder?: string; disabled?: boolean; w?: string }) => (
+  // Regex-typed numeric cell: pct → 0–100, int → whole numbers, money → 2 decimals.
+  const cellTyped = (
+    fr: FlatRow,
+    field: keyof Draft,
+    kind: "pct" | "int" | "money",
+    opts?: { placeholder?: string; disabled?: boolean },
+  ) => (
     <input
-      type="number"
-      min={0}
-      step="any"
+      type="text"
+      inputMode={kind === "int" ? "numeric" : "decimal"}
       disabled={opts?.disabled}
       className={cn("cell text-right", opts?.disabled && "cursor-not-allowed text-slate-300")}
       value={drafts[fr.key]?.[field] ?? ""}
       placeholder={opts?.placeholder}
-      onChange={(e) => set(fr.key, field, e.target.value)}
+      onChange={(e) =>
+        set(fr.key, field, kind === "int" ? sanitizeInt(e.target.value) : sanitizeDecimal(e.target.value))
+      }
+      onBlur={(e) => {
+        if (kind === "pct") set(fr.key, field, clampPct(e.target.value));
+        if (kind === "money") set(fr.key, field, roundMoney(e.target.value));
+      }}
     />
   );
 
@@ -270,6 +316,8 @@ export default function Entry() {
                 const saved = savedKeys.has(fr.key);
                 const isInit = fr.entityType === "INITIATIVE";
                 const schemeWithSubs = fr.entityType === "SCHEME" && fr.hasSubs;
+                // Locked = value comes from elsewhere (rollup) — no double typing.
+                const locked = schemeWithSubs || fr.computed;
                 const prevPct = fr.prev?.physicalProgressPct ?? null;
                 const typedPct = d.physicalProgressPct === "" ? (fr.today?.physicalProgressPct ?? null) : Number(d.physicalProgressPct);
                 const delta = fmtDelta(typedPct, prevPct);
@@ -297,8 +345,12 @@ export default function Entry() {
                             {fr.adpCode && <span className="ml-1.5 text-[11px] text-slate-400">#{fr.adpCode}</span>}
                           </div>
                           <div className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-400">
-                            {fr.prev && (
-                              <>was {fr.prev.physicalProgressPct ?? "—"}% on {new Date(fr.prev.reportDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}</>
+                            {fr.computed ? (
+                              <span className="italic">auto-computed from its {fr.schemeCount} scheme{fr.schemeCount === 1 ? "" : "s"} — no entry needed here</span>
+                            ) : (
+                              fr.prev && (
+                                <>was {fr.prev.physicalProgressPct ?? "—"}% on {new Date(fr.prev.reportDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}</>
+                              )
                             )}
                             {fr.entityType === "SCHEME" && (
                               <button
@@ -314,70 +366,101 @@ export default function Entry() {
                       </div>
                     </td>
                     <td className="border-l border-slate-100 p-0">
+                      {locked ? (
+                        <div className="cell flex cursor-not-allowed items-center text-slate-300">—</div>
+                      ) : (
+                        <select className="cell" value={d.phase} onChange={(e) => set(fr.key, "phase", e.target.value)}>
+                          <option value="">{fr.prev?.phase ? `(${fr.prev.phase})` : "— select phase —"}</option>
+                          {PHASES.map((p) => (
+                            <option key={p} value={p}>
+                              {p}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </td>
+                    <td className="w-24 border-l border-slate-100 p-0">
+                      {fr.computed ? (
+                        <div className="cell flex items-center justify-end gap-1 font-bold text-navy-700">
+                          {fmtPct(fr.rolledPhysical)} <span className="text-[9px] font-semibold text-slate-400">AUTO</span>
+                        </div>
+                      ) : (
+                        cellTyped(fr, "physicalProgressPct", "pct", {
+                          placeholder: prevPct != null ? String(prevPct) : "0–100",
+                          disabled: schemeWithSubs,
+                        })
+                      )}
+                    </td>
+                    <td className="w-20 border-l border-slate-100 text-center">
+                      <Delta value={locked ? null : delta} />
+                    </td>
+                    <td className="border-l border-slate-100 p-0">
                       <input
-                        className="cell"
-                        list="phase-suggestions"
-                        value={d.phase}
-                        placeholder={fr.prev?.phase ?? "e.g. piling / earthwork"}
-                        onChange={(e) => set(fr.key, "phase", e.target.value)}
-                        disabled={schemeWithSubs}
+                        className={cn("cell", fr.computed && "cursor-not-allowed")}
+                        value={d.narrative}
+                        placeholder={fr.computed ? "—" : "what moved on ground today…"}
+                        onChange={(e) => set(fr.key, "narrative", e.target.value)}
+                        disabled={fr.computed}
+                      />
+                    </td>
+                    <td className="w-24 border-l border-slate-100 p-0">{cellTyped(fr, "manpower", "int", { placeholder: fr.prev?.manpower?.toString(), disabled: locked })}</td>
+                    <td className="w-24 border-l border-slate-100 p-0">{cellTyped(fr, "machinery", "int", { placeholder: fr.prev?.machinery?.toString(), disabled: locked })}</td>
+                    <td className="w-32 border-l border-slate-100 p-0">
+                      {locked ? (
+                        <div className="cell flex cursor-not-allowed items-center text-slate-300">auto</div>
+                      ) : (
+                        <select className="cell" value={d.siteStatus} onChange={(e) => set(fr.key, "siteStatus", e.target.value)}>
+                          <option value="">{fr.prev ? `(${fr.prev.siteStatus.replace(/_/g, " ").toLowerCase()})` : "auto from %"}</option>
+                          {SITE_STATUSES.map((s) => (
+                            <option key={s.value} value={s.value}>
+                              {s.label}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </td>
+                    <td className="border-l border-slate-100 p-0">
+                      <input
+                        className={cn("cell", fr.computed && "cursor-not-allowed")}
+                        value={d.bottlenecks}
+                        placeholder={fr.computed ? "—" : "blocker / decision needed"}
+                        onChange={(e) => set(fr.key, "bottlenecks", e.target.value)}
+                        disabled={fr.computed}
+                      />
+                    </td>
+                    <td className="border-l border-slate-100 p-0">
+                      <input
+                        className={cn("cell", fr.computed && "cursor-not-allowed")}
+                        value={d.remarks}
+                        placeholder={fr.computed ? "—" : "any other details…"}
+                        onChange={(e) => set(fr.key, "remarks", e.target.value)}
+                        disabled={fr.computed}
                       />
                     </td>
                     <td className="w-24 border-l border-slate-100 p-0">
-                      {cellNum(fr, "physicalProgressPct", {
-                        placeholder: prevPct != null ? String(prevPct) : undefined,
-                        disabled: schemeWithSubs,
-                      })}
-                    </td>
-                    <td className="w-20 border-l border-slate-100 text-center">
-                      <Delta value={schemeWithSubs ? null : delta} />
-                    </td>
-                    <td className="border-l border-slate-100 p-0">
-                      <input className="cell" value={d.narrative} placeholder="what moved on ground today…" onChange={(e) => set(fr.key, "narrative", e.target.value)} />
-                    </td>
-                    <td className="w-24 border-l border-slate-100 p-0">{cellNum(fr, "manpower", { placeholder: fr.prev?.manpower?.toString(), disabled: schemeWithSubs })}</td>
-                    <td className="w-24 border-l border-slate-100 p-0">{cellNum(fr, "machinery", { placeholder: fr.prev?.machinery?.toString(), disabled: schemeWithSubs })}</td>
-                    <td className="w-32 border-l border-slate-100 p-0">
-                      <select className="cell" value={d.siteStatus} onChange={(e) => set(fr.key, "siteStatus", e.target.value)} disabled={schemeWithSubs}>
-                        <option value="">{fr.prev ? `(${fr.prev.siteStatus.replace(/_/g, " ").toLowerCase()})` : "— select —"}</option>
-                        {SITE_STATUSES.map((s) => (
-                          <option key={s.value} value={s.value}>
-                            {s.label}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="border-l border-slate-100 p-0">
-                      <input className="cell" value={d.bottlenecks} placeholder="blocker / decision needed" onChange={(e) => set(fr.key, "bottlenecks", e.target.value)} />
-                    </td>
-                    <td className="border-l border-slate-100 p-0">
-                      <input className="cell" value={d.remarks} placeholder="any other details…" onChange={(e) => set(fr.key, "remarks", e.target.value)} />
+                      {fr.entityType === "SCHEME" ? cellTyped(fr, "fundsReleased", "money", { placeholder: fr.prev?.fundsReleased?.toString() }) : <div className="cell cursor-not-allowed text-center text-slate-300">—</div>}
                     </td>
                     <td className="w-24 border-l border-slate-100 p-0">
-                      {fr.entityType === "SCHEME" ? cellNum(fr, "fundsReleased", { placeholder: fr.prev?.fundsReleased?.toString() }) : <div className="cell cursor-not-allowed text-center text-slate-300">—</div>}
-                    </td>
-                    <td className="w-24 border-l border-slate-100 p-0">
-                      {fr.entityType === "SCHEME" ? cellNum(fr, "expenditure", { placeholder: fr.prev?.expenditure?.toString() }) : <div className="cell cursor-not-allowed text-center text-slate-300">—</div>}
+                      {fr.entityType === "SCHEME" ? cellTyped(fr, "expenditure", "money", { placeholder: fr.prev?.expenditure?.toString() }) : <div className="cell cursor-not-allowed text-center text-slate-300">—</div>}
                     </td>
                     <td className="w-10 text-center">
-                      {saved ? <span className="text-emerald-600">✓</span> : dirty ? <span className="text-amber-500">●</span> : fr.today ? <span className="text-navy-400">✓</span> : <span className="text-slate-300">—</span>}
+                      {fr.computed ? <span className="text-[10px] font-bold text-slate-400">AUTO</span> : saved ? <span className="text-emerald-600">✓</span> : dirty ? <span className="text-amber-500">●</span> : fr.today ? <span className="text-navy-400">✓</span> : <span className="text-slate-300">—</span>}
                     </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
-          <datalist id="phase-suggestions">
-            {["Survey / Design", "Land Acquisition", "Utilities Shifting", "Mobilization", "Earthwork / Excavation", "Piling / Foundation", "Structure / RCC", "Deck / Superstructure", "Backfilling", "Road Works / Carpeting", "Electrical / Mechanical", "Finishing", "Landscaping / Beautification", "Testing & Commissioning", "Defect Liability"].map((p) => (
-              <option key={p} value={p} />
-            ))}
-          </datalist>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 bg-slate-50 px-4 py-2.5 text-[11px] text-slate-500">
           <div>
             <span className="mr-4">● unsaved</span>
             <span className="mr-4 text-emerald-600">✓ saved</span>
-            <span>% Complete is cumulative from start · Δ Today is computed automatically vs your last report · Financial % is computed from Spent ÷ Allocation.</span>
+            <span>
+              % is cumulative · Δ, Financial %, Site Status and Lifecycle stage are derived automatically (entering
+              progress marks a scheme Started; 100% marks it Completed) · initiative &amp; scheme rows with children are
+              AUTO — fill only the lowest level.
+            </span>
           </div>
           <div>
             {rows.length} rows · {dirtyKeys.length} unsaved
