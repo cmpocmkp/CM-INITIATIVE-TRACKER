@@ -110,13 +110,21 @@ export class CoreService {
     };
   }
 
-  async initiatives(_user: SessionUser) {
+  async initiatives(user: SessionUser) {
+    const scoped = !isStaff(user);
+    const deptId = user.departmentId ?? "___none___";
+    // Departments only see initiatives they are eligible for: ones they lead
+    // or ones containing at least one of their schemes — and inside those,
+    // only their own schemes (no cross-department visibility).
     return this.prisma.initiative.findMany({
+      where: scoped
+        ? { OR: [{ leadDepartmentId: deptId }, { schemes: { some: { departmentId: deptId } } }] }
+        : {},
       orderBy: { number: "asc" },
       include: {
         leadDepartment: { select: { id: true, name: true, code: true } },
         updates: { orderBy: { reportDate: "desc" }, take: 1 },
-        schemes: { include: this.latestInclude },
+        schemes: { where: scoped ? { departmentId: deptId } : {}, include: this.latestInclude },
       },
     });
   }
@@ -136,15 +144,30 @@ export class CoreService {
     });
     if (!init) throw new NotFoundException("Initiative not found");
 
+    // Eligibility: a department may open an initiative only if it leads it or
+    // owns schemes in it (schemes include above is already scoped).
+    const scoped = !isStaff(user);
+    const isLead = init.leadDepartmentId === user.departmentId;
+    if (scoped && !isLead && init.schemes.length === 0) {
+      throw new ForbiddenException("Your department is not part of this initiative");
+    }
+
     const since = new Date(Date.now() - 30 * 86400000);
+    const deptId = user.departmentId ?? "___none___";
     const trend = await this.prisma.progressUpdate.findMany({
       where: {
         reportDate: { gte: since },
-        OR: [
-          { initiativeId: id },
-          { scheme: { initiativeId: id } },
-          { subProject: { scheme: { initiativeId: id } } },
-        ],
+        OR: scoped
+          ? [
+              ...(isLead ? [{ initiativeId: id }] : []),
+              { scheme: { initiativeId: id, departmentId: deptId } },
+              { subProject: { scheme: { initiativeId: id, departmentId: deptId } } },
+            ]
+          : [
+              { initiativeId: id },
+              { scheme: { initiativeId: id } },
+              { subProject: { scheme: { initiativeId: id } } },
+            ],
       },
       orderBy: { reportDate: "asc" },
       select: { reportDate: true, physicalProgressPct: true, financialProgressPct: true, expenditure: true },

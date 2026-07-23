@@ -50,7 +50,7 @@ export default function Layout() {
         { to: "/", label: "Dashboard", d: I.dash },
         { to: "/entry", label: "Daily Data Entry", d: I.sheet },
         { to: "/schemes", label: "My Schemes", d: I.list },
-        { to: "/initiatives", label: "Initiatives", d: I.target },
+        { to: "/initiatives", label: "My Initiatives", d: I.target },
       ];
 
   async function doLogout() {

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, Initiative, deptShort, fmtM, fmtPct } from "../api";
-import { Heading, Spinner, ErrorBox, Bar } from "../ui";
+import { useAuth, isStaff } from "../auth";
+import { Heading, Spinner, ErrorBox, Bar, Empty } from "../ui";
 
 function schemePhys(s: Initiative["schemes"][number]): number {
   const subs = s.subProjects ?? [];
@@ -35,6 +36,8 @@ function roll(i: Initiative) {
 }
 
 export default function Initiatives() {
+  const { user } = useAuth();
+  const staff = isStaff(user);
   const [list, setList] = useState<Initiative[] | null>(null);
   const [err, setErr] = useState("");
 
@@ -45,9 +48,18 @@ export default function Initiatives() {
   if (err) return <ErrorBox message={err} />;
   if (!list) return <Spinner label="Loading initiatives…" />;
 
+  if (!staff && !list.length) {
+    return (
+      <div className="space-y-5">
+        <Heading title="My Initiatives" />
+        <Empty title="No initiatives for your department" hint="Initiatives appear here when your department leads one or has schemes under one." />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
-      <Heading title="21 Initiatives" />
+      <Heading title={staff ? "21 Initiatives" : "My Initiatives"} />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {list.map((i) => {
