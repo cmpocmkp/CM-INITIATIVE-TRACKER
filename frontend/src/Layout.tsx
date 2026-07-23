@@ -59,7 +59,7 @@ export default function Layout() {
   }
 
   const sidebarContent = (isCollapsed: boolean) => (
-    <div className="flex h-full flex-col bg-navy-900">
+    <div className="flex h-full flex-col bg-[#3b3d40]">
       <div className={cn("flex items-center border-b border-white/10 py-4", isCollapsed ? "justify-center px-2" : "gap-3 px-5")}>
         <Logo size={40} className="rounded-lg" />
         {!isCollapsed && (
@@ -118,7 +118,7 @@ export default function Layout() {
       </aside>
       {open && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-navy-950/60" onClick={() => setOpen(false)} />
+          <div className="absolute inset-0 bg-black/35" onClick={() => setOpen(false)} />
           <aside className="absolute inset-y-0 left-0 w-64">{sidebarContent(false)}</aside>
         </div>
       )}
@@ -151,7 +151,7 @@ export default function Layout() {
                 {user.role === "SUPERADMIN" ? "Super Admin" : user.role === "ADMIN" ? "Admin" : "Department User"}
               </div>
             </div>
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-navy-800 text-sm font-bold text-white">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-200 text-sm text-neutral-700">
               {user.name.slice(0, 1).toUpperCase()}
             </div>
             <button onClick={doLogout} className="btn-ghost px-3 py-1.5 text-xs">

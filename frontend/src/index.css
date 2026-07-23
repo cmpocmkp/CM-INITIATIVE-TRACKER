@@ -28,7 +28,7 @@ strong {
     @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60;
   }
   .btn-primary {
-    @apply btn bg-navy-800 text-white hover:bg-navy-700;
+    @apply btn bg-[#4a4c50] text-white hover:bg-[#3b3d40];
   }
   .btn-ghost {
     @apply btn border border-slate-300 bg-white text-slate-700 hover:bg-slate-50;
