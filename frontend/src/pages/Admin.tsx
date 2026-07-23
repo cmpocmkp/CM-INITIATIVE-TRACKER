@@ -7,6 +7,9 @@ interface UserRow {
   username: string;
   name: string;
   role: string;
+  email: string | null;
+  phone: string | null;
+  passwordPlain: string | null;
   lastLoginAt: string | null;
   department: { id: string; name: string; code: string } | null;
 }
@@ -30,9 +33,19 @@ export default function Admin() {
   const [busy, setBusy] = useState(false);
   const [target, setTarget] = useState<UserRow | null>(null);
   const [pwd, setPwd] = useState("");
+  const [uEmails, setUEmails] = useState<Record<string, string>>({});
+  const [uPhones, setUPhones] = useState<Record<string, string>>({});
+  const [showPwd, setShowPwd] = useState(false);
 
   function load() {
-    api.get<UserRow[]>("/admin/users").then(setUsers).catch((e) => setErr((e as Error).message));
+    api
+      .get<UserRow[]>("/admin/users")
+      .then((u) => {
+        setUsers(u);
+        setUEmails(Object.fromEntries(u.map((x) => [x.id, x.email ?? ""])));
+        setUPhones(Object.fromEntries(u.map((x) => [x.id, x.phone ?? ""])));
+      })
+      .catch((e) => setErr((e as Error).message));
     api
       .get<DeptRow[]>("/departments")
       .then((d) => {
@@ -82,6 +95,18 @@ export default function Admin() {
       setMsg(`✓ Password updated for ${target.username}`);
       setTarget(null);
       setPwd("");
+      load();
+    } catch (e) {
+      setMsg(`✗ ${(e as Error).message}`);
+    }
+  }
+
+  async function saveUserContact(u: UserRow) {
+    setMsg("");
+    try {
+      await api.post(`/admin/users/${u.id}/contact`, { email: uEmails[u.id] ?? "", phone: uPhones[u.id] ?? "" });
+      setMsg(`✓ Contact saved for ${u.username}`);
+      load();
     } catch (e) {
       setMsg(`✗ ${(e as Error).message}`);
     }
@@ -168,15 +193,23 @@ export default function Admin() {
 
       <div className="card overflow-hidden">
         <div className="border-b border-slate-200 px-5 py-3">
-          <h2 className="text-sm font-bold uppercase tracking-wide text-navy-900">User accounts</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold uppercase tracking-wide text-navy-900">User accounts</h2>
+            <button className="btn-ghost px-3 py-1 text-xs" onClick={() => setShowPwd((v) => !v)}>
+              {showPwd ? "🙈 Hide passwords" : "👁 Show passwords"}
+            </button>
+          </div>
         </div>
         <div className="scroll-thin overflow-x-auto">
-          <table className="w-full" style={{ minWidth: 760 }}>
+          <table className="w-full" style={{ minWidth: 1180 }}>
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50">
                 <th className="th">Username</th>
                 <th className="th">Name / Department</th>
                 <th className="th">Role</th>
+                <th className="th">Password</th>
+                <th className="th" style={{ minWidth: 210 }}>Email</th>
+                <th className="th" style={{ minWidth: 150 }}>Phone</th>
                 <th className="th">Last Login</th>
                 <th className="th"></th>
               </tr>
@@ -185,7 +218,9 @@ export default function Admin() {
               {users.map((u) => (
                 <tr key={u.id} className="border-b border-slate-100 hover:bg-navy-50/30">
                   <td className="td font-semibold text-navy-800">{u.username}</td>
-                  <td className="td">{u.department ? u.department.name : u.name}</td>
+                  <td className="td max-w-[220px] truncate" title={u.department ? u.department.name : u.name}>
+                    {u.department ? u.department.name : u.name}
+                  </td>
                   <td className="td">
                     <span
                       className={
@@ -199,8 +234,32 @@ export default function Admin() {
                       {u.role}
                     </span>
                   </td>
-                  <td className="td text-[12px] text-slate-500">{u.lastLoginAt ? fmtDate(u.lastLoginAt) : "never"}</td>
-                  <td className="td text-right">
+                  <td className="td whitespace-nowrap font-mono text-[12px] text-slate-700">
+                    {u.passwordPlain ? (showPwd ? u.passwordPlain : "•".repeat(Math.min(10, u.passwordPlain.length))) : "—"}
+                  </td>
+                  <td className="td">
+                    <input
+                      className="input py-1.5 text-[12px]"
+                      type="email"
+                      placeholder="user@email.com"
+                      value={uEmails[u.id] ?? ""}
+                      onChange={(e) => setUEmails((p) => ({ ...p, [u.id]: e.target.value }))}
+                    />
+                  </td>
+                  <td className="td">
+                    <input
+                      className="input py-1.5 text-[12px]"
+                      type="tel"
+                      placeholder="9230…"
+                      value={uPhones[u.id] ?? ""}
+                      onChange={(e) => setUPhones((p) => ({ ...p, [u.id]: e.target.value.replace(/[^\d+]/g, "") }))}
+                    />
+                  </td>
+                  <td className="td whitespace-nowrap text-[12px] text-slate-500">{u.lastLoginAt ? fmtDate(u.lastLoginAt) : "never"}</td>
+                  <td className="td whitespace-nowrap text-right">
+                    <button className="btn-ghost mr-2 px-3 py-1 text-xs" onClick={() => saveUserContact(u)}>
+                      Save
+                    </button>
                     <button className="btn-ghost px-3 py-1 text-xs" onClick={() => { setTarget(u); setPwd(""); setMsg(""); }}>
                       Reset password
                     </button>

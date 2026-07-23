@@ -112,9 +112,15 @@ function matchInitiative(row: SeedScheme): number | null {
 
 async function ensureUser(username: string, password: string, name: string, role: Role, departmentId: string | null) {
   const existing = await prisma.user.findUnique({ where: { username } });
-  if (existing) return existing;
+  if (existing) {
+    // Backfill the SUPERADMIN-visible password record for known seed defaults.
+    if (!existing.passwordPlain && (await bcrypt.compare(password, existing.passwordHash))) {
+      await prisma.user.update({ where: { id: existing.id }, data: { passwordPlain: password } });
+    }
+    return existing;
+  }
   const passwordHash = await bcrypt.hash(password, 10);
-  return prisma.user.create({ data: { username, passwordHash, name, role, departmentId } });
+  return prisma.user.create({ data: { username, passwordHash, passwordPlain: password, name, role, departmentId } });
 }
 
 async function main() {

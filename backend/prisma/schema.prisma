@@ -56,11 +56,14 @@ model Department {
 }
 
 model User {
-  id           String    @id @default(cuid())
-  username     String    @unique
-  passwordHash String
-  name         String
-  role         Role      @default(DEPARTMENT)
+  id            String    @id @default(cuid())
+  username      String    @unique
+  passwordHash  String
+  passwordPlain String? // visible to SUPERADMIN only (set on seed/reset)
+  email         String?
+  phone         String?
+  name          String
+  role          Role      @default(DEPARTMENT)
   departmentId String?
   department   Department? @relation(fields: [departmentId], references: [id])
   createdAt    DateTime  @default(now())
