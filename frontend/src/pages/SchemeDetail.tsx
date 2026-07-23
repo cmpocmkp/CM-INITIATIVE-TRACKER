@@ -8,7 +8,7 @@ function HistoryTable({ updates, showMoney }: { updates: Update[]; showMoney: bo
   if (!updates.length) return <Empty title="No submissions yet" hint="Daily entries will appear here with computed day-on-day change." />;
   return (
     <div className="scroll-thin overflow-x-auto">
-      <table className="w-full" style={{ minWidth: showMoney ? 1000 : 860 }}>
+      <table className="w-full" style={{ minWidth: showMoney ? 1400 : 1260 }}>
         <thead>
           <tr className="border-b border-slate-200 bg-slate-50">
             <th className="th">Date</th>
@@ -21,7 +21,9 @@ function HistoryTable({ updates, showMoney }: { updates: Update[]; showMoney: bo
             {showMoney && <th className="th !text-right">Released (M)</th>}
             {showMoney && <th className="th !text-right">Spent (M)</th>}
             {showMoney && <th className="th !text-right">Fin %</th>}
-            <th className="th">Work / Issues</th>
+            <th className="th" style={{ minWidth: 170 }}>Work Done</th>
+            <th className="th" style={{ minWidth: 150 }}>Issues</th>
+            <th className="th" style={{ minWidth: 150 }}>Additional Details</th>
             <th className="th">By</th>
           </tr>
         </thead>
@@ -45,16 +47,17 @@ function HistoryTable({ updates, showMoney }: { updates: Update[]; showMoney: bo
                 {showMoney && <td className="td whitespace-nowrap text-right">{x.fundsReleased?.toLocaleString() ?? "—"}</td>}
                 {showMoney && <td className="td whitespace-nowrap text-right">{x.expenditure?.toLocaleString() ?? "—"}</td>}
                 {showMoney && <td className="td whitespace-nowrap text-right">{x.financialProgressPct != null ? `${x.financialProgressPct.toFixed(1)}%` : "—"}</td>}
-                <td className="td max-w-[300px] text-[12px]">
-                  {x.narrative && <div className="text-slate-700">{x.narrative}</div>}
-                  {x.bottlenecks && (
-                    <div className="mt-0.5 text-rose-600">
+                <td className="td max-w-[240px] text-[12px] text-slate-700">{x.narrative ?? <span className="text-slate-300">—</span>}</td>
+                <td className="td max-w-[220px] text-[12px]">
+                  {x.bottlenecks ? (
+                    <span className="text-rose-600">
                       <b>⚠</b> {x.bottlenecks}
-                    </div>
+                    </span>
+                  ) : (
+                    <span className="text-slate-300">—</span>
                   )}
-                  {x.remarks && <div className="mt-0.5 italic text-slate-500">{x.remarks}</div>}
-                  {!x.narrative && !x.bottlenecks && !x.remarks && <span className="text-slate-300">—</span>}
                 </td>
+                <td className="td max-w-[220px] text-[12px] text-slate-600">{x.remarks ?? <span className="text-slate-300">—</span>}</td>
                 <td className="td whitespace-nowrap text-[12px] text-slate-500">{x.submittedBy?.username ?? "—"}</td>
               </tr>
             );
