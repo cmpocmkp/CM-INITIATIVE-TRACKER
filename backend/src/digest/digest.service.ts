@@ -257,7 +257,7 @@ export class DigestService {
       </div>
     </div>
     <div style="padding:12px 24px;background:#f8fafc;border-top:1px solid #e5eaf0;font-size:11px;color:#94a3b8;text-align:center;">
-      Chief Minister's Policy &amp; Reform Unit (CMPO) · Government of Khyber Pakhtunkhwa
+      Chief Minister's Policy Office (CMPO) · Government of Khyber Pakhtunkhwa
     </div>
   </div>
 </div>`;

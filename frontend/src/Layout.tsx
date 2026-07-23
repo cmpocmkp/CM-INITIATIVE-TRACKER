@@ -79,7 +79,7 @@ export default function Layout() {
         ))}
       </nav>
       <div className="border-t border-white/10 px-5 py-3 text-[11px] leading-relaxed text-white/40">
-        Chief Minister&apos;s Policy &amp; Reform Unit
+        Chief Minister&apos;s Policy Office
         <br />
         CMPO · Daily Progress Tracking
       </div>
