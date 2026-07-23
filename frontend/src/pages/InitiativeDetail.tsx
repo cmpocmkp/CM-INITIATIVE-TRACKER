@@ -40,7 +40,9 @@ export default function InitiativeDetail() {
       <div className="card overflow-hidden">
         <div className="border-b-4 border-navy-500 bg-white px-6 py-5">
           <div className="flex items-center gap-3">
-            <div className="text-3xl font-extrabold leading-none text-navy-400">{i.number}</div>
+            <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center border border-neutral-300 text-[26px] font-light leading-none text-neutral-800">
+              {i.number}
+            </span>
             <div>
               <div className="text-[11px] uppercase tracking-wider text-navy-600">{i.category} · CM Focus Initiative</div>
               <h1 className="text-xl font-bold text-navy-900">{i.name}</h1>
@@ -140,7 +142,7 @@ export default function InitiativeDetail() {
                 </div>
                 {u.narrative && <p className="mt-1.5 text-[13px] text-slate-700">{u.narrative}</p>}
                 {u.bottlenecks && (
-                  <p className="mt-1 text-[12px] text-rose-600">
+                  <p className="mt-1 text-[12px] text-neutral-900">
                     <b>Bottleneck:</b> {u.bottlenecks}
                   </p>
                 )}

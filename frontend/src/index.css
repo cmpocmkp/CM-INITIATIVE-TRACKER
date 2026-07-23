@@ -3,7 +3,20 @@
 @tailwind utilities;
 
 body {
-  @apply bg-white text-slate-900 antialiased;
+  @apply bg-white text-neutral-800 antialiased;
+}
+
+/* Thin typography app-wide: neutralize bold utilities (max emphasis = medium). */
+.font-extrabold,
+.font-bold {
+  font-weight: 400 !important;
+}
+.font-semibold {
+  font-weight: 400 !important;
+}
+b,
+strong {
+  font-weight: 500;
 }
 
 @layer components {

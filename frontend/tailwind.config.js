@@ -4,19 +4,19 @@ export default {
   theme: {
     extend: {
       colors: {
-        // CMPO brand blue — anchored on the logo cyan (#00AEEF)
+        // Monochrome scale — the whole app is black & white
         navy: {
-          50: "#eef9fe",
-          100: "#d8f1fc",
-          200: "#b0e4f9",
-          300: "#7dd3f4",
-          400: "#38bdf0",
-          500: "#00aeef",
-          600: "#0092cd",
-          700: "#0076a9",
-          800: "#0a5f86",
-          900: "#0d4a68",
-          950: "#082f43",
+          50: "#fafafa",
+          100: "#f5f5f5",
+          200: "#e5e5e5",
+          300: "#d4d4d4",
+          400: "#a3a3a3",
+          500: "#737373",
+          600: "#525252",
+          700: "#404040",
+          800: "#262626",
+          900: "#171717",
+          950: "#0a0a0a",
         },
       },
       boxShadow: {

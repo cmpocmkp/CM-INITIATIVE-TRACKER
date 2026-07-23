@@ -50,7 +50,7 @@ function HistoryTable({ updates, showMoney }: { updates: Update[]; showMoney: bo
                 <td className="td max-w-[240px] text-[12px] text-slate-700">{x.narrative ?? <span className="text-slate-300">—</span>}</td>
                 <td className="td max-w-[220px] text-[12px]">
                   {x.bottlenecks ? (
-                    <span className="text-rose-600">
+                    <span className="text-neutral-900">
                       <b>⚠</b> {x.bottlenecks}
                     </span>
                   ) : (
@@ -224,7 +224,7 @@ export default function SchemeDetail() {
                       {open ? "▲ hide history" : "▼ history"}
                     </button>
                     {canEdit && (
-                      <button className="text-[11px] text-rose-400 hover:text-rose-600" onClick={() => deleteSub(sp.id, sp.name)}>
+                      <button className="text-[11px] text-neutral-400 hover:text-neutral-900" onClick={() => deleteSub(sp.id, sp.name)}>
                         delete
                       </button>
                     )}

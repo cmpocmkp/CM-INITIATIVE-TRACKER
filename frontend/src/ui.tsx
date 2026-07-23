@@ -28,10 +28,10 @@ const STAGE_STYLE: Record<Stage, string> = {
   NOT_STARTED: "bg-slate-100 text-slate-600 border-slate-200",
   FEASIBILITY: "bg-navy-50 text-navy-700 border-navy-200",
   PC1_APPROVAL: "bg-navy-100 text-navy-800 border-navy-300",
-  TENDERING: "bg-amber-50 text-amber-700 border-amber-200",
+  TENDERING: "bg-neutral-100 text-neutral-700 border-neutral-300",
   EXECUTION: "bg-navy-700 text-white border-navy-700",
-  COMPLETED: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  ON_HOLD: "bg-rose-50 text-rose-700 border-rose-200",
+  COMPLETED: "bg-neutral-50 text-neutral-700 border-neutral-300",
+  ON_HOLD: "bg-neutral-100 text-neutral-900 border-neutral-300",
 };
 
 export function StageBadge({ stage }: { stage?: Stage | null }) {
@@ -42,9 +42,9 @@ export function StageBadge({ stage }: { stage?: Stage | null }) {
 const SITE_STYLE: Record<SiteStatus, string> = {
   NOT_STARTED: "bg-slate-100 text-slate-600 border-slate-200",
   ACTIVE: "bg-navy-700 text-white border-navy-700",
-  SLOW: "bg-amber-50 text-amber-700 border-amber-300",
-  HALTED: "bg-rose-600 text-white border-rose-600",
-  COMPLETED: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  SLOW: "bg-neutral-100 text-neutral-700 border-neutral-400",
+  HALTED: "bg-white text-neutral-900 border-neutral-900 font-medium",
+  COMPLETED: "bg-neutral-50 text-neutral-700 border-neutral-300",
 };
 
 export function SiteBadge({ status }: { status?: SiteStatus | null }) {
@@ -60,10 +60,22 @@ export function Delta({ value }: { value: string | null }) {
     <span
       className={cn(
         "inline-block rounded px-1.5 py-0.5 text-[11px] font-bold",
-        zero ? "bg-slate-100 text-slate-500" : positive ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700",
+        zero ? "bg-slate-100 text-slate-500" : positive ? "bg-neutral-50 text-neutral-700" : "bg-neutral-100 text-neutral-900",
       )}
     >
       {zero ? "0%" : value}
+    </span>
+  );
+}
+
+/** Thin outlined square holding a number that fills it. */
+export function NumBox({ n, size = 28 }: { n: number; size?: number }) {
+  return (
+    <span
+      className="inline-flex shrink-0 items-center justify-center border border-neutral-300 font-light leading-none text-neutral-800"
+      style={{ width: size, height: size, fontSize: Math.round(size * 0.62) }}
+    >
+      {n}
     </span>
   );
 }
@@ -91,7 +103,7 @@ export function Spinner({ label = "Loading…" }: { label?: string }) {
 
 export function ErrorBox({ message }: { message: string }) {
   return (
-    <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{message}</div>
+    <div className="rounded-lg border border-neutral-300 bg-neutral-100 px-4 py-3 text-sm text-neutral-900">{message}</div>
   );
 }
 

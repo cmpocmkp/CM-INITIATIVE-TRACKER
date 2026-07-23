@@ -284,7 +284,7 @@ export default function Entry() {
         }
       />
 
-      {notice && <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-[13px] text-emerald-800">✓ {notice}</div>}
+      {notice && <div className="rounded-lg border border-neutral-300 bg-neutral-50 px-4 py-2.5 text-[13px] text-neutral-800">✓ {notice}</div>}
       {err && <ErrorBox message={err} />}
 
       <div className="card overflow-hidden">
@@ -333,10 +333,10 @@ export default function Entry() {
                 const prevPct = fr.prev?.physicalProgressPct ?? null;
                 const typedPct = d.physicalProgressPct === "" ? (fr.today?.physicalProgressPct ?? null) : Number(d.physicalProgressPct);
                 const delta = fmtDelta(typedPct, prevPct);
-                const nameBg = dirty ? "bg-amber-50" : isInit ? "bg-navy-50/50" : "bg-white";
+                const nameBg = dirty ? "bg-neutral-100" : isInit ? "bg-navy-50/50" : "bg-white";
 
                 return (
-                  <tr key={fr.key} className={cn("group/row", dirty && "bg-amber-50/40", isInit && !dirty && "bg-navy-50/30")}>
+                  <tr key={fr.key} className={cn("group/row", dirty && "bg-neutral-100/60", isInit && !dirty && "bg-navy-50/30")}>
                     {/* Name (frozen) */}
                     <td className={cn("grid-td sticky left-0 z-10 shadow-[2px_0_4px_-2px_rgba(11,74,104,0.12)]", nameBg)}>
                       <div className={cn("px-3 py-2", fr.isSub && "pl-8")}>
@@ -428,9 +428,9 @@ export default function Entry() {
                       {fr.computed ? (
                         <span className="text-[9px] font-bold text-slate-300">AUTO</span>
                       ) : saved ? (
-                        <span className="font-bold text-emerald-600">✓</span>
+                        <span className="font-bold text-neutral-900">✓</span>
                       ) : dirty ? (
-                        <span className="text-amber-500">●</span>
+                        <span className="text-neutral-500">●</span>
                       ) : fr.today ? (
                         <span className="text-navy-400">✓</span>
                       ) : (
@@ -445,8 +445,8 @@ export default function Entry() {
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 bg-white px-4 py-2 text-[11px] text-slate-400">
           <div className="flex items-center gap-4">
-            <span><span className="text-amber-500">●</span> unsaved</span>
-            <span><span className="font-bold text-emerald-600">✓</span> saved</span>
+            <span><span className="text-neutral-500">●</span> unsaved</span>
+            <span><span className="font-bold text-neutral-900">✓</span> saved</span>
             <span><span className="font-bold text-slate-300">AUTO</span> computed — fill the lowest level only</span>
           </div>
           <div>

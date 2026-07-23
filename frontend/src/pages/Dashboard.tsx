@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, Dashboard as Dash, deptShort, fmtM, fmtPct } from "../api";
 import { useAuth, isStaff } from "../auth";
-import { Kpi, Bar, Heading, Spinner, ErrorBox } from "../ui";
+import { Kpi, Bar, Heading, Spinner, ErrorBox, NumBox } from "../ui";
 import { SectorBars, StageDonut, ComplianceBar } from "../charts";
 
 export default function Dashboard() {
@@ -68,12 +68,12 @@ export default function Dashboard() {
               className="group rounded-lg border border-slate-200 p-3 transition hover:border-navy-300 hover:bg-navy-50/40"
             >
               <div className="flex items-start justify-between gap-2">
-                <div className="text-[13px] font-semibold leading-snug text-navy-900 group-hover:text-navy-700">
-                  <span className="mr-1.5 font-extrabold text-navy-500">{i.number}.</span>
-                  {i.shortName}
+                <div className="flex items-start gap-2 text-[13px] leading-snug text-neutral-900">
+                  <NumBox n={i.number} size={24} />
+                  <span className="min-w-0">{i.shortName}</span>
                 </div>
                 {i.updatedToday > 0 && (
-                  <span className="badge border-emerald-200 bg-emerald-50 text-emerald-700">today ✓</span>
+                  <span className="badge border-neutral-300 bg-neutral-50 text-neutral-700">today ✓</span>
                 )}
               </div>
               <div className="mt-2 flex items-center gap-2">
@@ -95,19 +95,19 @@ export default function Dashboard() {
 
       {/* Sites needing attention */}
       {d.attention.length > 0 && (
-        <div className="card border-l-4 border-l-rose-500 p-5">
-          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-rose-700">
+        <div className="card border-l-4 border-l-neutral-800 p-5">
+          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-neutral-900">
             ⚠ Sites Halted / Slow — needs attention
           </h2>
           <div className="space-y-2">
             {d.attention.map((a, i) => (
-              <Link key={i} to={`/schemes/${a.schemeId}`} className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-[13px] hover:border-rose-300">
-                <span className={a.status === "HALTED" ? "badge border-rose-600 bg-rose-600 text-white" : "badge border-amber-300 bg-amber-50 text-amber-700"}>
+              <Link key={i} to={`/schemes/${a.schemeId}`} className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-[13px] hover:border-neutral-400">
+                <span className={a.status === "HALTED" ? "badge border-neutral-900 bg-neutral-900 text-white" : "badge border-neutral-400 bg-neutral-100 text-neutral-700"}>
                   {a.status}
                 </span>
                 <span className="font-bold text-navy-800">{a.dept}</span>
                 <span className="flex-1 truncate text-slate-700">{a.name}</span>
-                {a.note && <span className="text-[12px] italic text-rose-600">{a.note}</span>}
+                {a.note && <span className="text-[12px] italic text-neutral-900">{a.note}</span>}
               </Link>
             ))}
           </div>

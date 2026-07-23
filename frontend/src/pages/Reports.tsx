@@ -78,8 +78,8 @@ export default function Reports() {
         <div
           className={
             result.startsWith("✓")
-              ? "rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-[13px] text-emerald-800"
-              : "rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-[13px] text-rose-700"
+              ? "rounded-lg border border-neutral-300 bg-neutral-50 px-4 py-2.5 text-[13px] text-neutral-800"
+              : "rounded-lg border border-neutral-300 bg-neutral-100 px-4 py-2.5 text-[13px] text-neutral-900"
           }
         >
           {result}

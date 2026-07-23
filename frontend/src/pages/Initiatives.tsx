@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, Initiative, deptShort, fmtM, fmtPct } from "../api";
 import { useAuth, isStaff } from "../auth";
-import { Heading, Spinner, ErrorBox, Bar, Empty } from "../ui";
+import { Heading, Spinner, ErrorBox, Bar, Empty, NumBox } from "../ui";
 
 function schemePhys(s: Initiative["schemes"][number]): number {
   const subs = s.subProjects ?? [];
@@ -66,9 +66,9 @@ export default function Initiatives() {
           const r = roll(i);
           return (
             <Link key={i.id} to={`/initiatives/${i.id}`} className="card group p-4 transition hover:border-navy-300 hover:shadow-md">
-              <h3 className="text-[14px] font-bold leading-snug text-navy-900 group-hover:text-navy-700">
-                <span className="mr-1.5 text-navy-500">{i.number}.</span>
-                {i.name}
+              <h3 className="flex items-start gap-2 text-[14px] leading-snug text-neutral-900">
+                <NumBox n={i.number} size={26} />
+                <span className="min-w-0">{i.name}</span>
               </h3>
               <div className="mt-1 truncate text-[11px] text-slate-500" title={i.leadDepartment?.name ?? ""}>
                 Lead: <span className="font-semibold text-slate-700">{deptShort(i.leadDepartment)}</span>
