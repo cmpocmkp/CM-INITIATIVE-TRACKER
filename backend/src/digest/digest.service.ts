@@ -3,6 +3,7 @@ import { Cron } from "@nestjs/schedule";
 import * as nodemailer from "nodemailer";
 import { PrismaService } from "../prisma.service";
 import { CoreService } from "../core/core.service";
+import { WhatsappService } from "./whatsapp.service";
 import { SessionUser } from "../auth/decorators";
 
 const SYSTEM_USER: SessionUser = {
@@ -21,6 +22,7 @@ export class DigestService {
   constructor(
     private prisma: PrismaService,
     private core: CoreService,
+    private whatsapp: WhatsappService,
   ) {}
 
   private transport() {
@@ -60,15 +62,32 @@ export class DigestService {
     }
   }
 
-  /** Departments (with an email set) that haven't submitted anything today get a reminder. */
-  async sendReminders(): Promise<{ ok: boolean; reason?: string; sent: string[]; skipped: number }> {
+  /** Departments that haven't submitted anything today get an email and/or WhatsApp reminder. */
+  async sendReminders(): Promise<{ ok: boolean; reason?: string; sent: string[]; whatsapp: string[]; skipped: number }> {
     const transport = this.transport();
-    if (!transport) return { ok: false, reason: "Gmail credentials not configured", sent: [], skipped: 0 };
-
     const d = await this.core.dashboard(SYSTEM_USER);
-    const laggards = d.compliance.filter((c: any) => c.schemes > 0 && c.updatedToday === 0 && c.email);
+    const pending = d.compliance.filter((c: any) => c.schemes > 0 && c.updatedToday === 0);
     const appUrl = process.env.APP_URL || "#";
     const sent: string[] = [];
+    const waSent: string[] = [];
+
+    // WhatsApp reminders (departments with a phone set)
+    if (this.whatsapp.configured) {
+      const phones = await this.prisma.department.findMany({
+        where: { id: { in: pending.map((c: any) => c.id) }, phone: { not: null } },
+        select: { code: true, name: true, phone: true, _count: { select: { schemes: true } } },
+      });
+      for (const p of phones) {
+        const r = await this.whatsapp.send(
+          p.phone as string,
+          `*CM Initiative Tracker*\n\nDear ${p.name},\n\nToday's progress entry for your ${p._count.schemes} priority scheme(s) is pending. Please fill your daily sheet:\n${appUrl}/entry\n\nSign in with your department code *${p.code}*.\n\n— Chief Minister's Policy Office (CMPO)`,
+        );
+        if (r.ok) waSent.push(p.code);
+      }
+    }
+
+    if (!transport) return { ok: waSent.length > 0, reason: "Gmail credentials not configured", sent: [], whatsapp: waSent, skipped: 0 };
+    const laggards = pending.filter((c: any) => c.email);
 
     for (const dept of laggards) {
       await transport.sendMail({
@@ -93,14 +112,12 @@ export class DigestService {
       });
       sent.push(dept.code);
     }
-    return { ok: true, sent, skipped: laggards.length - sent.length };
+    return { ok: true, sent, whatsapp: waSent, skipped: laggards.length - sent.length };
   }
 
-  /** One-time onboarding email: credentials + how to use. Sent per department that has an email. */
-  async sendOnboarding(deptIds?: string[]): Promise<{ ok: boolean; reason?: string; sent: string[]; noEmail: string[] }> {
+  /** One-time onboarding: credentials + how to use — email and/or WhatsApp per department. */
+  async sendOnboarding(deptIds?: string[]): Promise<{ ok: boolean; reason?: string; sent: string[]; whatsapp: string[]; noEmail: string[] }> {
     const transport = this.transport();
-    if (!transport) return { ok: false, reason: "Gmail credentials not configured", sent: [], noEmail: [] };
-
     const where = deptIds && deptIds.length ? { id: { in: deptIds } } : {};
     const depts = await this.prisma.department.findMany({
       where,
@@ -110,7 +127,22 @@ export class DigestService {
     const appUrl = process.env.APP_URL || "#";
     const defaultPwd = process.env.DEPARTMENT_DEFAULT_PASSWORD || "123456";
     const sent: string[] = [];
+    const waSent: string[] = [];
     const noEmail: string[] = [];
+
+    // WhatsApp credentials (departments with a phone set)
+    if (this.whatsapp.configured) {
+      for (const dept of depts) {
+        if (!dept.phone) continue;
+        const r = await this.whatsapp.send(
+          dept.phone,
+          `*CM Initiative Tracker* — Government of Khyber Pakhtunkhwa\n\nDear ${dept.name},\n\nThe Chief Minister's Office is tracking daily progress of CM priority schemes. Your department has *${dept._count.schemes} scheme(s)* on the platform.\n\n🌐 ${appUrl}\n👤 Username: *${dept.code}*\n🔑 Password: *${defaultPwd}* (change after first login)\n\nEvery day, open Daily Data Entry and fill: current phase, % complete, work done today, manpower & machinery, site status, and any issues.\n\n— Chief Minister's Policy Office (CMPO)`,
+        );
+        if (r.ok) waSent.push(dept.code);
+      }
+    }
+
+    if (!transport) return { ok: waSent.length > 0, reason: "Gmail credentials not configured", sent: [], whatsapp: waSent, noEmail: [] };
 
     for (const dept of depts) {
       if (!dept.email) {
@@ -145,7 +177,7 @@ export class DigestService {
       });
       sent.push(dept.code);
     }
-    return { ok: true, sent, noEmail };
+    return { ok: true, sent, whatsapp: waSent, noEmail };
   }
 
   async send(): Promise<{ ok: boolean; reason?: string; recipients?: string[] }> {

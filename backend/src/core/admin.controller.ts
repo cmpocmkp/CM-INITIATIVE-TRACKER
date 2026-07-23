@@ -33,14 +33,22 @@ export class AdminController {
     return { ok: true };
   }
 
-  /** Set / clear a department's focal-person email (used for onboarding + reminders). */
+  /** Set / clear a department's focal-person email + WhatsApp number (onboarding + reminders). */
   @Post("departments/:id/email")
-  async setDepartmentEmail(@Param("id") id: string, @Body() body: { email?: string }) {
+  async setDepartmentContact(@Param("id") id: string, @Body() body: { email?: string; phone?: string }) {
     const email = (body.email || "").trim().toLowerCase();
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       throw new BadRequestException("Invalid email address");
     }
-    await this.prisma.department.update({ where: { id }, data: { email: email || null } });
-    return { ok: true, email: email || null };
+    const data: { email: string | null; phone?: string | null } = { email: email || null };
+    if (body.phone !== undefined) {
+      const phone = (body.phone || "").replace(/[^\d]/g, "");
+      if (phone && (phone.length < 10 || phone.length > 15)) {
+        throw new BadRequestException("Phone must be international format, e.g. 923001234567");
+      }
+      data.phone = phone || null;
+    }
+    await this.prisma.department.update({ where: { id }, data });
+    return { ok: true, ...data };
   }
 }

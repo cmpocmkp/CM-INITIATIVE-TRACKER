@@ -38,14 +38,14 @@ export default function InitiativeDetail() {
   return (
     <div className="space-y-6">
       <div className="card overflow-hidden">
-        <div className="bg-navy-900 px-6 py-5 text-white">
+        <div className="border-b-4 border-navy-500 bg-white px-6 py-5">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-lg font-extrabold text-navy-900">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-navy-600 text-lg font-extrabold text-white">
               {i.number}
             </div>
             <div>
-              <div className="text-[11px] uppercase tracking-wider text-white/60">{i.category} · CM Focus Initiative</div>
-              <h1 className="text-xl font-bold">{i.name}</h1>
+              <div className="text-[11px] uppercase tracking-wider text-navy-600">{i.category} · CM Focus Initiative</div>
+              <h1 className="text-xl font-bold text-navy-900">{i.name}</h1>
             </div>
           </div>
           <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -56,8 +56,8 @@ export default function InitiativeDetail() {
               ["Alloc / Spent", `${fmtM(alloc)} · ${fmtM(spent)}`],
             ].map(([l, v]) => (
               <div key={l}>
-                <div className="text-[10px] uppercase tracking-wider text-white/50">{l}</div>
-                <div className="mt-0.5 text-[13px] font-semibold">{v}</div>
+                <div className="text-[10px] uppercase tracking-wider text-slate-400">{l}</div>
+                <div className="mt-0.5 text-[13px] font-semibold text-navy-900">{v}</div>
               </div>
             ))}
           </div>

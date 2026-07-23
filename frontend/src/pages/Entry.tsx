@@ -291,22 +291,22 @@ export default function Entry() {
         <div className="scroll-thin overflow-x-auto">
           <table className="w-full border-collapse" style={{ minWidth: 1680 }}>
             <thead>
-              <tr className="border-b border-slate-200 bg-navy-900 text-white">
-                <th className="sticky left-0 z-10 bg-navy-900 px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider" style={{ minWidth: 300 }}>
+              <tr className="border-b-2 border-navy-200 bg-navy-50 text-navy-900">
+                <th className="sticky left-0 z-10 bg-navy-50 px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-wider" style={{ minWidth: 300 }}>
                   Scheme / Work Item
                 </th>
-                <th className="th !text-white/70" style={{ minWidth: 140 }}>Current Phase</th>
-                <th className="th !text-right !text-white/70">% Complete</th>
-                <th className="th !text-center !text-white/70">Δ Today</th>
-                <th className="th !text-white/70" style={{ minWidth: 200 }}>Work Done Today</th>
-                <th className="th !text-right !text-white/70">Manpower</th>
-                <th className="th !text-right !text-white/70">Machinery</th>
-                <th className="th !text-white/70">Site Status</th>
-                <th className="th !text-white/70" style={{ minWidth: 160 }}>Issues / Needs Decision</th>
-                <th className="th !text-white/70" style={{ minWidth: 170 }}>Additional Details</th>
-                <th className="th !text-right !text-white/70">Released (M)</th>
-                <th className="th !text-right !text-white/70">Spent (M)</th>
-                <th className="th !text-center !text-white/70">✓</th>
+                <th className="th !text-navy-800" style={{ minWidth: 140 }}>Current Phase</th>
+                <th className="th !text-right !text-navy-800">% Complete</th>
+                <th className="th !text-center !text-navy-800">Δ Today</th>
+                <th className="th !text-navy-800" style={{ minWidth: 200 }}>Work Done Today</th>
+                <th className="th !text-right !text-navy-800">Manpower</th>
+                <th className="th !text-right !text-navy-800">Machinery</th>
+                <th className="th !text-navy-800">Site Status</th>
+                <th className="th !text-navy-800" style={{ minWidth: 160 }}>Issues / Needs Decision</th>
+                <th className="th !text-navy-800" style={{ minWidth: 170 }}>Additional Details</th>
+                <th className="th !text-right !text-navy-800">Released (M)</th>
+                <th className="th !text-right !text-navy-800">Spent (M)</th>
+                <th className="th !text-center !text-navy-800">✓</th>
               </tr>
             </thead>
             <tbody>

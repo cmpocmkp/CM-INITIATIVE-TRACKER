@@ -46,6 +46,7 @@ model Department {
   code           String       @unique // short code / login username
   name           String // full display name
   email          String? // focal-person email (onboarding + daily reminders)
+  phone          String? // focal-person WhatsApp number, intl format e.g. 923001234567
   isSector       Boolean      @default(true) // has ADP schemes attached
   createdAt      DateTime     @default(now())
 

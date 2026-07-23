@@ -16,6 +16,7 @@ interface DeptRow {
   code: string;
   name: string;
   email: string | null;
+  phone: string | null;
   _count: { schemes: number; ledInitiatives: number };
 }
 
@@ -23,6 +24,7 @@ export default function Admin() {
   const [users, setUsers] = useState<UserRow[] | null>(null);
   const [depts, setDepts] = useState<DeptRow[] | null>(null);
   const [emails, setEmails] = useState<Record<string, string>>({});
+  const [phones, setPhones] = useState<Record<string, string>>({});
   const [err, setErr] = useState("");
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
@@ -36,16 +38,17 @@ export default function Admin() {
       .then((d) => {
         setDepts(d);
         setEmails(Object.fromEntries(d.map((x) => [x.id, x.email ?? ""])));
+        setPhones(Object.fromEntries(d.map((x) => [x.id, x.phone ?? ""])));
       })
       .catch((e) => setErr((e as Error).message));
   }
   useEffect(load, []);
 
-  async function saveEmail(d: DeptRow) {
+  async function saveContact(d: DeptRow) {
     setMsg("");
     try {
-      await api.post(`/admin/departments/${d.id}/email`, { email: emails[d.id] ?? "" });
-      setMsg(`✓ Email saved for ${d.code}`);
+      await api.post(`/admin/departments/${d.id}/email`, { email: emails[d.id] ?? "", phone: phones[d.id] ?? "" });
+      setMsg(`✓ Contact saved for ${d.code}`);
       load();
     } catch (e) {
       setMsg(`✗ ${(e as Error).message}`);
@@ -102,9 +105,9 @@ export default function Admin() {
 
       <div className="card overflow-hidden">
         <div className="border-b border-slate-200 px-5 py-3">
-          <h2 className="text-sm font-bold uppercase tracking-wide text-navy-900">Departments — focal person emails</h2>
+          <h2 className="text-sm font-bold uppercase tracking-wide text-navy-900">Departments — focal person contacts</h2>
           <p className="mt-0.5 text-[12px] text-slate-500">
-            First email = username + password + instructions. Afterwards, departments with a pending sheet get an automatic reminder each morning (9:00 AM PKT).
+            First message = username + password + instructions (email and WhatsApp when configured). Afterwards, departments with a pending sheet get an automatic reminder each morning (9:00 AM PKT).
           </p>
         </div>
         <div className="scroll-thin overflow-x-auto">
@@ -114,7 +117,8 @@ export default function Admin() {
                 <th className="th">Code</th>
                 <th className="th">Department</th>
                 <th className="th">Schemes</th>
-                <th className="th" style={{ minWidth: 260 }}>Focal Email</th>
+                <th className="th" style={{ minWidth: 220 }}>Focal Email</th>
+                <th className="th" style={{ minWidth: 160 }}>WhatsApp #</th>
                 <th className="th"></th>
               </tr>
             </thead>
@@ -133,15 +137,24 @@ export default function Admin() {
                       onChange={(e) => setEmails((p) => ({ ...p, [d.id]: e.target.value }))}
                     />
                   </td>
+                  <td className="td">
+                    <input
+                      className="input py-1.5 text-[13px]"
+                      type="tel"
+                      placeholder="923001234567"
+                      value={phones[d.id] ?? ""}
+                      onChange={(e) => setPhones((p) => ({ ...p, [d.id]: e.target.value.replace(/[^\d+]/g, "") }))}
+                    />
+                  </td>
                   <td className="td whitespace-nowrap text-right">
-                    <button className="btn-ghost mr-2 px-3 py-1 text-xs" onClick={() => saveEmail(d)}>
+                    <button className="btn-ghost mr-2 px-3 py-1 text-xs" onClick={() => saveContact(d)}>
                       Save
                     </button>
                     <button
                       className="btn-ghost px-3 py-1 text-xs"
-                      disabled={!(emails[d.id] ?? "").trim() || busy}
+                      disabled={(!(emails[d.id] ?? "").trim() && !(phones[d.id] ?? "").trim()) || busy}
                       onClick={() => sendOnboarding([d.id])}
-                      title="Send username + password to this department"
+                      title="Send username + password to this department (email + WhatsApp)"
                     >
                       ✉ Credentials
                     </button>

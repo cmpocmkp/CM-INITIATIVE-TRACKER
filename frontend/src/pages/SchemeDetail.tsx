@@ -113,19 +113,19 @@ export default function SchemeDetail() {
   return (
     <div className="space-y-6">
       <div className="card overflow-hidden">
-        <div className="bg-navy-900 px-6 py-5 text-white">
+        <div className="border-b-4 border-navy-500 bg-white px-6 py-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <div className="text-[11px] uppercase tracking-wider text-white/60">
+              <div className="text-[11px] uppercase tracking-wider text-navy-600">
                 {s.sector} {s.adpCode ? `· ADP ${s.adpCode}` : ""} {s.isPRP ? "· Peshawar Revitalization Plan" : ""}
               </div>
-              <h1 className="mt-1 text-lg font-bold leading-snug">{s.name}</h1>
+              <h1 className="mt-1 text-lg font-bold leading-snug text-navy-900">{s.name}</h1>
             </div>
             <div className="text-right">
-              <div className="text-[10px] uppercase tracking-wider text-white/50">Lifecycle (PC-1 etc.)</div>
+              <div className="text-[10px] uppercase tracking-wider text-slate-400">Lifecycle (PC-1 etc.)</div>
               {canEdit ? (
                 <select
-                  className="mt-1 rounded-lg border-0 bg-white/15 px-3 py-1.5 text-[13px] font-semibold text-white outline-none [&>option]:text-navy-900"
+                  className="input mt-1 w-auto py-1.5 text-[13px] font-semibold text-navy-900"
                   value={s.stage}
                   onChange={(e) => changeStage(e.target.value as Stage)}
                 >
@@ -150,8 +150,8 @@ export default function SchemeDetail() {
               ["ADP Allocation", fmtM(s.adpAllocation)],
             ].map(([l, v]) => (
               <div key={l as string}>
-                <div className="text-[10px] uppercase tracking-wider text-white/50">{l}</div>
-                <div className="mt-0.5 text-[13px] font-semibold">{v}</div>
+                <div className="text-[10px] uppercase tracking-wider text-slate-400">{l}</div>
+                <div className="mt-0.5 text-[13px] font-semibold text-navy-900">{v}</div>
               </div>
             ))}
           </div>

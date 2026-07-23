@@ -25,32 +25,20 @@ export default function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-navy-900 px-4">
-      <div
-        className="pointer-events-none fixed inset-0 opacity-[0.07]"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle at 20% 20%, #ffffff 1px, transparent 1px), radial-gradient(circle at 80% 60%, #ffffff 1px, transparent 1px)",
-          backgroundSize: "48px 48px",
-        }}
-      />
+    <div className="flex min-h-screen items-center justify-center bg-white px-4">
       <div className="relative w-full max-w-md">
-        <div className="mb-7 text-center text-white">
-          <div className="mx-auto mb-4 w-fit shadow-lg">
-            <Logo size={72} className="rounded-2xl" />
+        <div className="mb-7 text-center">
+          <div className="mx-auto mb-4 w-fit">
+            <Logo size={84} className="rounded-2xl" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">CM INITIATIVE TRACKER</h1>
-          <p className="mt-1.5 text-[13px] text-white/60">
+          <h1 className="text-2xl font-bold tracking-tight text-navy-900">CM INITIATIVE TRACKER</h1>
+          <p className="mt-1.5 text-[13px] text-slate-500">
             Chief Minister&apos;s Priority Initiatives &amp; Sector Tracking · Khyber Pakhtunkhwa
           </p>
         </div>
 
         <div className="card p-7">
-          <h2 className="text-lg font-bold text-navy-900">Sign in</h2>
-          <p className="mb-5 mt-1 text-[13px] text-slate-500">
-            Departments use their department code as username — e.g. Local Government signs in as{" "}
-            <span className="font-semibold text-navy-800">LG</span>.
-          </p>
+          <h2 className="mb-5 text-lg font-bold text-navy-900">Sign in</h2>
           <form onSubmit={submit} className="space-y-4">
             <div>
               <label htmlFor="u" className="label">
@@ -91,7 +79,7 @@ export default function Login() {
           </form>
         </div>
 
-        <p className="mt-5 text-center text-[11px] text-white/40">
+        <p className="mt-5 text-center text-[11px] text-slate-400">
           Chief Minister&apos;s Policy Office (CMPO) · Government of Khyber Pakhtunkhwa
         </p>
       </div>
