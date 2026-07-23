@@ -27,6 +27,25 @@ export default function Reports() {
     }
   }
 
+  async function remindNow() {
+    setSending(true);
+    setResult("");
+    try {
+      const r = await api.post<{ ok: boolean; reason?: string; sent: string[] }>("/digest/remind");
+      setResult(
+        r.ok
+          ? r.sent.length
+            ? `✓ Reminder sent to: ${r.sent.join(", ")}`
+            : "✓ No pending departments with an email set — nothing to remind."
+          : `✗ ${r.reason}`,
+      );
+    } catch (e) {
+      setResult(`✗ ${(e as Error).message}`);
+    } finally {
+      setSending(false);
+    }
+  }
+
   async function loadPreview() {
     const html = await api.get<string>("/digest/preview");
     setPreview(typeof html === "string" ? html : String(html));
@@ -41,9 +60,12 @@ export default function Reports() {
         title="Reports & Daily Digest"
         subtitle="The digest email goes out automatically every day at 6:00 PM (PKT) — you can also send or preview it now."
         action={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button className="btn-ghost" onClick={loadPreview}>
               👁 Preview
+            </button>
+            <button className="btn-ghost" onClick={remindNow} disabled={sending} title="Email departments that haven't filled today's sheet">
+              🔔 Remind Pending Depts
             </button>
             <button className="btn-primary" onClick={sendNow} disabled={sending}>
               {sending ? "Sending…" : "✉ Send Digest Now"}

@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Header, Param, Post, Query } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Header, Param, Patch, Post, Query } from "@nestjs/common";
+import { SchemeStage } from "@prisma/client";
 import { CoreService, SheetEntryInput } from "./core.service";
-import { CurrentUser, Roles, SessionUser } from "../auth/decorators";
+import { CurrentUser, SessionUser } from "../auth/decorators";
 
 @Controller()
 export class CoreController {
@@ -44,6 +45,38 @@ export class CoreController {
   @Get("schemes/:id")
   scheme(@CurrentUser() user: SessionUser, @Param("id") id: string) {
     return this.core.schemeDetail(user, id);
+  }
+
+  @Patch("schemes/:id/stage")
+  setStage(
+    @CurrentUser() user: SessionUser,
+    @Param("id") id: string,
+    @Body() body: { stage: SchemeStage },
+  ) {
+    return this.core.setSchemeStage(user, id, body?.stage);
+  }
+
+  // ── Sub-projects (work items inside a scheme) ──────────────
+  @Post("subprojects")
+  createSub(
+    @CurrentUser() user: SessionUser,
+    @Body() body: { schemeId?: string; name?: string; description?: string; weight?: number; targetDate?: string },
+  ) {
+    return this.core.createSubProject(user, body ?? {});
+  }
+
+  @Patch("subprojects/:id")
+  updateSub(
+    @CurrentUser() user: SessionUser,
+    @Param("id") id: string,
+    @Body() body: { name?: string; description?: string; weight?: number | null; targetDate?: string | null },
+  ) {
+    return this.core.updateSubProject(user, id, body ?? {});
+  }
+
+  @Delete("subprojects/:id")
+  deleteSub(@CurrentUser() user: SessionUser, @Param("id") id: string) {
+    return this.core.deleteSubProject(user, id);
   }
 
   // ── Daily data-entry sheet ─────────────────────────────────

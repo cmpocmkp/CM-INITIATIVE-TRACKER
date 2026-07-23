@@ -74,6 +74,7 @@ export default function DepartmentDetail() {
             <tbody>
               {d.schemes.map((s) => {
                 const u = s.updates?.[0];
+                const phys = s.effectivePhysical ?? u?.physicalProgressPct ?? null;
                 return (
                   <tr key={s.id} className="border-b border-slate-100 hover:bg-navy-50/40">
                     <td className="td max-w-[360px]">
@@ -90,12 +91,12 @@ export default function DepartmentDetail() {
                     <td className="td whitespace-nowrap text-right">{u?.expenditure?.toLocaleString() ?? "—"}</td>
                     <td className="td w-36">
                       <div className="flex items-center gap-2">
-                        <Bar value={u?.physicalProgressPct ?? 0} className="w-20" />
-                        <span className="text-xs font-semibold">{fmtPct(u?.physicalProgressPct)}</span>
+                        <Bar value={phys ?? 0} className="w-20" />
+                        <span className="text-xs font-semibold">{fmtPct(phys)}</span>
                       </div>
                     </td>
                     <td className="td">
-                      <StageBadge stage={u?.stage} />
+                      <StageBadge stage={s.stage} />
                     </td>
                     <td className="td whitespace-nowrap text-[12px] text-slate-500">{fmtDate(u?.reportDate)}</td>
                   </tr>

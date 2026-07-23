@@ -1,4 +1,4 @@
-import { Stage, stageLabel } from "./api";
+import { SiteStatus, siteLabel, Stage, stageLabel } from "./api";
 
 export const cn = (...parts: (string | false | null | undefined)[]) => parts.filter(Boolean).join(" ");
 
@@ -37,6 +37,35 @@ const STAGE_STYLE: Record<Stage, string> = {
 export function StageBadge({ stage }: { stage?: Stage | null }) {
   const s = stage ?? "NOT_STARTED";
   return <span className={cn("badge", STAGE_STYLE[s])}>{stageLabel(s)}</span>;
+}
+
+const SITE_STYLE: Record<SiteStatus, string> = {
+  NOT_STARTED: "bg-slate-100 text-slate-600 border-slate-200",
+  ACTIVE: "bg-navy-700 text-white border-navy-700",
+  SLOW: "bg-amber-50 text-amber-700 border-amber-300",
+  HALTED: "bg-rose-600 text-white border-rose-600",
+  COMPLETED: "bg-emerald-50 text-emerald-700 border-emerald-200",
+};
+
+export function SiteBadge({ status }: { status?: SiteStatus | null }) {
+  const s = status ?? "NOT_STARTED";
+  return <span className={cn("badge", SITE_STYLE[s])}>{siteLabel(s)}</span>;
+}
+
+export function Delta({ value }: { value: string | null }) {
+  if (!value) return <span className="text-slate-300">—</span>;
+  const positive = value.startsWith("+") && value !== "+0.0%";
+  const zero = value === "+0.0%" || value === "-0.0%";
+  return (
+    <span
+      className={cn(
+        "inline-block rounded px-1.5 py-0.5 text-[11px] font-bold",
+        zero ? "bg-slate-100 text-slate-500" : positive ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700",
+      )}
+    >
+      {zero ? "0%" : value}
+    </span>
+  );
 }
 
 export function Heading({ title, subtitle, action }: { title: string; subtitle?: React.ReactNode; action?: React.ReactNode }) {

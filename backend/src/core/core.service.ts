@@ -1,23 +1,26 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { Prisma, SchemeStage } from "@prisma/client";
+import { Prisma, SchemeStage, SiteStatus } from "@prisma/client";
 import { PrismaService } from "../prisma.service";
 import { SessionUser } from "../auth/decorators";
 
-export type EntityType = "SCHEME" | "INITIATIVE";
+export type EntityType = "SCHEME" | "INITIATIVE" | "SUBPROJECT";
 
 export interface SheetEntryInput {
   entityType: EntityType;
   entityId: string;
+  phase?: string | null;
+  physicalProgressPct?: number | null;
+  narrative?: string | null;
+  manpower?: number | null;
+  machinery?: number | null;
+  siteStatus?: SiteStatus | null;
+  bottlenecks?: string | null;
   fundsReleased?: number | null;
   expenditure?: number | null;
-  financialProgressPct?: number | null;
-  physicalProgressPct?: number | null;
-  stage?: SchemeStage | null;
-  narrative?: string | null;
-  bottlenecks?: string | null;
 }
 
-const STAGES: SchemeStage[] = [
+const SITE_STATUSES: SiteStatus[] = ["NOT_STARTED", "ACTIVE", "SLOW", "HALTED", "COMPLETED"];
+const LIFECYCLE: SchemeStage[] = [
   "NOT_STARTED", "FEASIBILITY", "PC1_APPROVAL", "TENDERING", "EXECUTION", "COMPLETED", "ON_HOLD",
 ];
 
@@ -31,11 +34,37 @@ function isStaff(user: SessionUser) {
   return user.role === "SUPERADMIN" || user.role === "ADMIN";
 }
 
+type Upd = {
+  reportDate: Date;
+  physicalProgressPct: number | null;
+  financialProgressPct: number | null;
+  expenditure: number | null;
+  fundsReleased: number | null;
+  siteStatus: SiteStatus;
+};
+
+/** Effective latest physical % of a scheme — rolls up sub-projects when present. */
+export function effectivePhysical(
+  scheme: { updates: Upd[]; subProjects?: { weight: number | null; updates: Upd[] }[] },
+): number | null {
+  const subs = scheme.subProjects ?? [];
+  if (subs.length) {
+    let w = 0;
+    let acc = 0;
+    for (const sp of subs) {
+      const weight = sp.weight && sp.weight > 0 ? sp.weight : 1;
+      w += weight;
+      acc += (sp.updates[0]?.physicalProgressPct ?? 0) * weight;
+    }
+    return w ? acc / w : null;
+  }
+  return scheme.updates[0]?.physicalProgressPct ?? null;
+}
+
 @Injectable()
 export class CoreService {
   constructor(private prisma: PrismaService) {}
 
-  /** Scheme where-clause scoped to the caller (departments only ever see their own). */
   schemeScope(user: SessionUser): Prisma.SchemeWhereInput {
     if (isStaff(user)) return {};
     if (!user.departmentId) throw new ForbiddenException("No department attached to this account");
@@ -47,17 +76,19 @@ export class CoreService {
     return { leadDepartmentId: user.departmentId ?? "___none___" };
   }
 
+  private latestInclude = {
+    updates: { orderBy: { reportDate: "desc" as const }, take: 1 },
+    subProjects: { include: { updates: { orderBy: { reportDate: "desc" as const }, take: 1 } } },
+  };
+
   // ── Reference data ────────────────────────────────────────────
   async departments(user: SessionUser) {
     const where: Prisma.DepartmentWhereInput = isStaff(user) ? {} : { id: user.departmentId ?? "___none___" };
-    const depts = await this.prisma.department.findMany({
+    return this.prisma.department.findMany({
       where,
       orderBy: { name: "asc" },
-      include: {
-        _count: { select: { schemes: true, ledInitiatives: true } },
-      },
+      include: { _count: { select: { schemes: true, ledInitiatives: true } } },
     });
-    return depts;
   }
 
   async departmentDetail(user: SessionUser, id: string) {
@@ -67,27 +98,26 @@ export class CoreService {
     const dept = await this.prisma.department.findUnique({
       where: { id },
       include: {
-        schemes: { include: { updates: { orderBy: { reportDate: "desc" }, take: 1 }, initiative: true }, orderBy: { name: "asc" } },
+        schemes: { include: { ...this.latestInclude, initiative: true }, orderBy: { name: "asc" } },
         ledInitiatives: { include: { updates: { orderBy: { reportDate: "desc" }, take: 1 } } },
       },
     });
     if (!dept) throw new NotFoundException("Department not found");
-    return dept;
+    return {
+      ...dept,
+      schemes: dept.schemes.map((s) => ({ ...s, effectivePhysical: effectivePhysical(s) })),
+    };
   }
 
-  async initiatives(user: SessionUser) {
-    // Everyone may see the list of 21 initiatives (national picture),
-    // but rollups for a department user only include what they can see? No —
-    // initiative rollups are aggregate; schemes inside remain visible only via detail.
-    const inits = await this.prisma.initiative.findMany({
+  async initiatives(_user: SessionUser) {
+    return this.prisma.initiative.findMany({
       orderBy: { number: "asc" },
       include: {
         leadDepartment: { select: { id: true, name: true, code: true } },
         updates: { orderBy: { reportDate: "desc" }, take: 1 },
-        schemes: { include: { updates: { orderBy: { reportDate: "desc" }, take: 1 } } },
+        schemes: { include: this.latestInclude },
       },
     });
-    return inits;
   }
 
   async initiativeDetail(user: SessionUser, id: string) {
@@ -98,27 +128,31 @@ export class CoreService {
         updates: { orderBy: { reportDate: "desc" }, take: 30 },
         schemes: {
           where: isStaff(user) ? {} : { departmentId: user.departmentId ?? "___none___" },
-          include: {
-            department: { select: { id: true, name: true, code: true } },
-            updates: { orderBy: { reportDate: "desc" }, take: 1 },
-          },
+          include: { ...this.latestInclude, department: { select: { id: true, name: true, code: true } } },
           orderBy: { name: "asc" },
         },
       },
     });
     if (!init) throw new NotFoundException("Initiative not found");
 
-    // Trend: last 30 days of updates across this initiative's schemes + itself
     const since = new Date(Date.now() - 30 * 86400000);
     const trend = await this.prisma.progressUpdate.findMany({
       where: {
         reportDate: { gte: since },
-        OR: [{ initiativeId: id }, { scheme: { initiativeId: id } }],
+        OR: [
+          { initiativeId: id },
+          { scheme: { initiativeId: id } },
+          { subProject: { scheme: { initiativeId: id } } },
+        ],
       },
       orderBy: { reportDate: "asc" },
       select: { reportDate: true, physicalProgressPct: true, financialProgressPct: true, expenditure: true },
     });
-    return { ...init, trend };
+    return {
+      ...init,
+      schemes: init.schemes.map((s) => ({ ...s, effectivePhysical: effectivePhysical(s) })),
+      trend,
+    };
   }
 
   async schemes(user: SessionUser, q?: { departmentId?: string; initiativeId?: string; search?: string }) {
@@ -138,15 +172,16 @@ export class CoreService {
           : {},
       ],
     };
-    return this.prisma.scheme.findMany({
+    const list = await this.prisma.scheme.findMany({
       where,
       include: {
+        ...this.latestInclude,
         department: { select: { id: true, name: true, code: true } },
         initiative: { select: { id: true, number: true, shortName: true } },
-        updates: { orderBy: { reportDate: "desc" }, take: 1 },
       },
       orderBy: [{ sector: "asc" }, { name: "asc" }],
     });
+    return list.map((s) => ({ ...s, effectivePhysical: effectivePhysical(s) }));
   }
 
   async schemeDetail(user: SessionUser, id: string) {
@@ -155,92 +190,213 @@ export class CoreService {
       include: {
         department: { select: { id: true, name: true, code: true } },
         initiative: { select: { id: true, number: true, name: true, shortName: true } },
-        updates: { orderBy: { reportDate: "desc" }, take: 60, include: { submittedBy: { select: { name: true, username: true } } } },
+        updates: {
+          orderBy: { reportDate: "desc" },
+          take: 90,
+          include: { submittedBy: { select: { name: true, username: true } } },
+        },
+        subProjects: {
+          orderBy: { createdAt: "asc" },
+          include: {
+            updates: {
+              orderBy: { reportDate: "desc" },
+              take: 30,
+              include: { submittedBy: { select: { name: true, username: true } } },
+            },
+          },
+        },
       },
     });
     if (!scheme) throw new NotFoundException("Scheme not found");
     if (!isStaff(user) && scheme.departmentId !== user.departmentId) {
       throw new ForbiddenException("Departments can only view their own schemes");
     }
-    return scheme;
+    return { ...scheme, effectivePhysical: effectivePhysical(scheme) };
   }
 
-  // ── Daily sheet (Excel-style) ────────────────────────────────
+  /** Owner department (or staff) updates the scheme lifecycle stage (PC-1 etc.). */
+  async setSchemeStage(user: SessionUser, id: string, stage: SchemeStage) {
+    if (!LIFECYCLE.includes(stage)) throw new BadRequestException("Invalid stage");
+    const scheme = await this.prisma.scheme.findUnique({ where: { id }, select: { departmentId: true } });
+    if (!scheme) throw new NotFoundException("Scheme not found");
+    if (!isStaff(user) && scheme.departmentId !== user.departmentId) {
+      throw new ForbiddenException("Not your scheme");
+    }
+    await this.prisma.scheme.update({ where: { id }, data: { stage } });
+    return { ok: true };
+  }
+
+  // ── Sub-projects (work items) ────────────────────────────────
+  private async assertSchemeOwner(user: SessionUser, schemeId: string) {
+    const scheme = await this.prisma.scheme.findUnique({ where: { id: schemeId }, select: { departmentId: true } });
+    if (!scheme) throw new NotFoundException("Scheme not found");
+    if (!isStaff(user) && scheme.departmentId !== user.departmentId) {
+      throw new ForbiddenException("Not your scheme");
+    }
+  }
+
+  async createSubProject(
+    user: SessionUser,
+    body: { schemeId?: string; name?: string; description?: string; weight?: number; targetDate?: string },
+  ) {
+    const schemeId = (body.schemeId || "").trim();
+    const name = (body.name || "").trim();
+    if (!schemeId || !name) throw new BadRequestException("schemeId and name are required");
+    await this.assertSchemeOwner(user, schemeId);
+    const weight = body.weight != null && isFinite(Number(body.weight)) && Number(body.weight) > 0 ? Number(body.weight) : null;
+    const targetDate = body.targetDate ? dateOnly(body.targetDate) : null;
+    return this.prisma.subProject.create({
+      data: { schemeId, name: name.slice(0, 300), description: (body.description || "").trim().slice(0, 1000) || null, weight, targetDate },
+    });
+  }
+
+  async updateSubProject(
+    user: SessionUser,
+    id: string,
+    body: { name?: string; description?: string; weight?: number | null; targetDate?: string | null },
+  ) {
+    const sp = await this.prisma.subProject.findUnique({ where: { id }, select: { schemeId: true } });
+    if (!sp) throw new NotFoundException("Work item not found");
+    await this.assertSchemeOwner(user, sp.schemeId);
+    const data: Prisma.SubProjectUpdateInput = {};
+    if (body.name !== undefined) {
+      const name = (body.name || "").trim();
+      if (!name) throw new BadRequestException("Name cannot be empty");
+      data.name = name.slice(0, 300);
+    }
+    if (body.description !== undefined) data.description = (body.description || "").trim().slice(0, 1000) || null;
+    if (body.weight !== undefined)
+      data.weight = body.weight != null && isFinite(Number(body.weight)) && Number(body.weight) > 0 ? Number(body.weight) : null;
+    if (body.targetDate !== undefined) data.targetDate = body.targetDate ? dateOnly(body.targetDate) : null;
+    await this.prisma.subProject.update({ where: { id }, data });
+    return { ok: true };
+  }
+
+  async deleteSubProject(user: SessionUser, id: string) {
+    const sp = await this.prisma.subProject.findUnique({ where: { id }, select: { schemeId: true } });
+    if (!sp) throw new NotFoundException("Work item not found");
+    await this.assertSchemeOwner(user, sp.schemeId);
+    await this.prisma.subProject.delete({ where: { id } }); // cascades its updates
+    return { ok: true };
+  }
+
+  // ── Daily sheet (Excel-style, with Δ vs previous report) ─────
   async sheet(user: SessionUser, dateStr?: string) {
     const date = dateOnly(dateStr);
+
     const schemes = await this.prisma.scheme.findMany({
       where: this.schemeScope(user),
       include: {
         department: { select: { id: true, name: true, code: true } },
         initiative: { select: { id: true, number: true, shortName: true } },
-        updates: { orderBy: { reportDate: "desc" }, take: 1 },
+        subProjects: { orderBy: { createdAt: "asc" } },
       },
       orderBy: [{ sector: "asc" }, { name: "asc" }],
     });
     const initiatives = await this.prisma.initiative.findMany({
       where: this.initiativeScope(user),
-      include: {
-        leadDepartment: { select: { id: true, name: true, code: true } },
-        updates: { orderBy: { reportDate: "desc" }, take: 1 },
-      },
+      include: { leadDepartment: { select: { id: true, name: true, code: true } } },
       orderBy: { number: "asc" },
     });
 
-    const dayUpdates = await this.prisma.progressUpdate.findMany({
-      where: {
-        reportDate: date,
-        OR: [
-          { schemeId: { in: schemes.map((s) => s.id) } },
-          { initiativeId: { in: initiatives.map((i) => i.id) } },
-        ],
-      },
-    });
-    const byScheme = new Map(dayUpdates.filter((u) => u.schemeId).map((u) => [u.schemeId as string, u]));
-    const byInit = new Map(dayUpdates.filter((u) => u.initiativeId).map((u) => [u.initiativeId as string, u]));
+    const schemeIds = schemes.map((s) => s.id);
+    const initIds = initiatives.map((i) => i.id);
+    const subIds = schemes.flatMap((s) => s.subProjects.map((sp) => sp.id));
 
-    const rows = [
-      ...initiatives.map((i) => ({
-        entityType: "INITIATIVE" as const,
-        entityId: i.id,
-        name: `[Initiative ${i.number}] ${i.name}`,
-        adpCode: null as string | null,
-        sector: i.leadDepartment?.code ?? "—",
-        department: i.leadDepartment,
-        totalCost: null as number | null,
-        adpAllocation: null as number | null,
-        isPRP: false,
-        today: byInit.get(i.id) ?? null,
-        latest: i.updates[0] ?? null,
+    // Updates on the selected date + the latest BEFORE the date (for Δ) + latest ever (for prefill hint).
+    const [dayUpdates, prevUpdates] = await Promise.all([
+      this.prisma.progressUpdate.findMany({
+        where: {
+          reportDate: date,
+          OR: [
+            { schemeId: { in: schemeIds } },
+            { initiativeId: { in: initIds } },
+            { subProjectId: { in: subIds } },
+          ],
+        },
+      }),
+      this.prisma.progressUpdate.findMany({
+        where: {
+          reportDate: { lt: date },
+          OR: [
+            { schemeId: { in: schemeIds } },
+            { initiativeId: { in: initIds } },
+            { subProjectId: { in: subIds } },
+          ],
+        },
+        orderBy: { reportDate: "desc" },
+      }),
+    ]);
+
+    const pick = (u: (typeof dayUpdates)[number]) =>
+      u.schemeId ? `SCHEME:${u.schemeId}` : u.initiativeId ? `INITIATIVE:${u.initiativeId}` : `SUBPROJECT:${u.subProjectId}`;
+    const todayMap = new Map(dayUpdates.map((u) => [pick(u), u]));
+    const prevMap = new Map<string, (typeof prevUpdates)[number]>();
+    for (const u of prevUpdates) {
+      const k = pick(u);
+      if (!prevMap.has(k)) prevMap.set(k, u); // first = latest before date
+    }
+
+    const initiativeRows = initiatives.map((i) => ({
+      entityType: "INITIATIVE" as const,
+      entityId: i.id,
+      name: i.name,
+      label: `Initiative ${i.number}`,
+      adpCode: null as string | null,
+      allocation: null as number | null,
+      isPRP: false,
+      hasSubs: false,
+      today: todayMap.get(`INITIATIVE:${i.id}`) ?? null,
+      prev: prevMap.get(`INITIATIVE:${i.id}`) ?? null,
+      subRows: [] as unknown[],
+    }));
+
+    const schemeRows = schemes.map((s) => ({
+      entityType: "SCHEME" as const,
+      entityId: s.id,
+      name: s.name,
+      label: s.sector,
+      adpCode: s.adpCode,
+      allocation: s.adpAllocation,
+      isPRP: s.isPRP,
+      hasSubs: s.subProjects.length > 0,
+      initiative: s.initiative,
+      today: todayMap.get(`SCHEME:${s.id}`) ?? null,
+      prev: prevMap.get(`SCHEME:${s.id}`) ?? null,
+      subRows: s.subProjects.map((sp) => ({
+        entityType: "SUBPROJECT" as const,
+        entityId: sp.id,
+        name: sp.name,
+        weight: sp.weight,
+        targetDate: sp.targetDate,
+        today: todayMap.get(`SUBPROJECT:${sp.id}`) ?? null,
+        prev: prevMap.get(`SUBPROJECT:${sp.id}`) ?? null,
       })),
-      ...schemes.map((s) => ({
-        entityType: "SCHEME" as const,
-        entityId: s.id,
-        name: s.name,
-        adpCode: s.adpCode,
-        sector: s.sector,
-        department: s.department,
-        totalCost: s.totalCost,
-        adpAllocation: s.adpAllocation,
-        isPRP: s.isPRP,
-        initiative: s.initiative,
-        today: byScheme.get(s.id) ?? null,
-        latest: s.updates[0] ?? null,
-      })),
-    ];
-    return { date: date.toISOString().slice(0, 10), rows };
+    }));
+
+    return { date: date.toISOString().slice(0, 10), rows: [...initiativeRows, ...schemeRows] };
   }
 
   async saveSheet(user: SessionUser, dateStr: string, entries: SheetEntryInput[]) {
     if (!Array.isArray(entries) || !entries.length) throw new BadRequestException("No entries to save");
-    if (entries.length > 500) throw new BadRequestException("Too many entries");
+    if (entries.length > 1000) throw new BadRequestException("Too many entries");
     const date = dateOnly(dateStr);
 
-    // Ownership sets
-    const myScheme = new Set(
-      (await this.prisma.scheme.findMany({ where: this.schemeScope(user), select: { id: true } })).map((s) => s.id),
-    );
+    const myschemes = await this.prisma.scheme.findMany({
+      where: this.schemeScope(user),
+      select: { id: true, adpAllocation: true },
+    });
+    const myScheme = new Map(myschemes.map((s) => [s.id, s]));
     const myInit = new Set(
       (await this.prisma.initiative.findMany({ where: this.initiativeScope(user), select: { id: true } })).map((i) => i.id),
+    );
+    const mySub = new Set(
+      (
+        await this.prisma.subProject.findMany({
+          where: { scheme: this.schemeScope(user) },
+          select: { id: true },
+        })
+      ).map((sp) => sp.id),
     );
 
     let saved = 0;
@@ -250,38 +406,57 @@ export class CoreService {
       try {
         if (e.entityType === "SCHEME" && !myScheme.has(e.entityId)) throw new Error("not your scheme");
         if (e.entityType === "INITIATIVE" && !myInit.has(e.entityId)) throw new Error("not your initiative");
+        if (e.entityType === "SUBPROJECT" && !mySub.has(e.entityId)) throw new Error("not your work item");
+
+        const isScheme = e.entityType === "SCHEME";
+        const phys = pctOrNull(e.physicalProgressPct);
+        const spent = isScheme ? numOrNull(e.expenditure) : null;
+        const alloc = isScheme ? myScheme.get(e.entityId)?.adpAllocation ?? null : null;
 
         const clean = {
-          fundsReleased: numOrNull(e.fundsReleased),
-          expenditure: numOrNull(e.expenditure),
-          financialProgressPct: pctOrNull(e.financialProgressPct),
-          physicalProgressPct: pctOrNull(e.physicalProgressPct),
-          stage: e.stage && STAGES.includes(e.stage) ? e.stage : undefined,
+          phase: strOrNull(e.phase, 200),
+          physicalProgressPct: phys,
           narrative: strOrNull(e.narrative),
+          manpower: intOrNull(e.manpower),
+          machinery: intOrNull(e.machinery),
+          siteStatus:
+            e.siteStatus && SITE_STATUSES.includes(e.siteStatus)
+              ? e.siteStatus
+              : phys != null && phys >= 100
+                ? ("COMPLETED" as SiteStatus)
+                : undefined,
           bottlenecks: strOrNull(e.bottlenecks),
+          fundsReleased: isScheme ? numOrNull(e.fundsReleased) : null,
+          expenditure: spent,
+          // Financial % is computed, never typed.
+          financialProgressPct:
+            spent != null && alloc && alloc > 0 ? Math.min(100, (spent / alloc) * 100) : null,
           submittedById: user.userId,
         };
 
-        // Skip totally empty rows (nothing entered)
         const hasData =
-          clean.fundsReleased != null || clean.expenditure != null || clean.financialProgressPct != null ||
-          clean.physicalProgressPct != null || clean.stage != null || clean.narrative || clean.bottlenecks;
+          clean.phase || clean.physicalProgressPct != null || clean.narrative || clean.manpower != null ||
+          clean.machinery != null || clean.siteStatus != null || clean.bottlenecks ||
+          clean.fundsReleased != null || clean.expenditure != null;
         if (!hasData) continue;
 
         const keyWhere =
           e.entityType === "SCHEME"
             ? { schemeId_reportDate: { schemeId: e.entityId, reportDate: date } }
-            : { initiativeId_reportDate: { initiativeId: e.entityId, reportDate: date } };
+            : e.entityType === "INITIATIVE"
+              ? { initiativeId_reportDate: { initiativeId: e.entityId, reportDate: date } }
+              : { subProjectId_reportDate: { subProjectId: e.entityId, reportDate: date } };
 
         await this.prisma.progressUpdate.upsert({
           where: keyWhere as never,
           update: clean,
           create: {
             ...clean,
-            stage: clean.stage ?? "NOT_STARTED",
+            siteStatus: clean.siteStatus ?? "NOT_STARTED",
             reportDate: date,
             schemeId: e.entityType === "SCHEME" ? e.entityId : null,
             initiativeId: e.entityType === "INITIATIVE" ? e.entityId : null,
+            subProjectId: e.entityType === "SUBPROJECT" ? e.entityId : null,
           },
         });
         saved++;
@@ -300,42 +475,61 @@ export class CoreService {
     const schemes = await this.prisma.scheme.findMany({
       where: this.schemeScope(user),
       include: {
+        ...this.latestInclude,
         department: { select: { id: true, name: true, code: true } },
         initiative: { select: { id: true, number: true, shortName: true, category: true } },
-        updates: { orderBy: { reportDate: "desc" }, take: 1 },
       },
     });
 
-    const roll = rollup(schemes.map((s) => ({ cost: s.totalCost, alloc: s.adpAllocation, u: s.updates[0] ?? null })), today);
+    const items = schemes.map((s) => ({
+      cost: s.totalCost,
+      alloc: s.adpAllocation,
+      stage: s.stage,
+      phys: effectivePhysical(s),
+      u: s.updates[0] ?? null,
+      updatedToday: schemeUpdatedToday(s, today),
+    }));
+    const roll = rollup(items, today);
 
-    // Stage distribution
+    // Lifecycle stage distribution (scheme-level, incl. PC-1 etc.)
     const stageDist: Record<string, number> = {};
-    for (const s of schemes) {
-      const st = s.updates[0]?.stage ?? "NOT_STARTED";
-      stageDist[st] = (stageDist[st] || 0) + 1;
-    }
+    for (const s of schemes) stageDist[s.stage] = (stageDist[s.stage] || 0) + 1;
 
-    // Sector (=Department) rollup
+    // Halted / slow sites today (CM attention list)
+    const attention = schemes
+      .flatMap((s) => {
+        const rows: { schemeId: string; name: string; dept: string; status: SiteStatus; note: string | null }[] = [];
+        const u = s.updates[0];
+        if (u && (u.siteStatus === "HALTED" || u.siteStatus === "SLOW"))
+          rows.push({ schemeId: s.id, name: s.name, dept: s.department.code, status: u.siteStatus, note: u.bottlenecks });
+        for (const sp of s.subProjects) {
+          const su = sp.updates[0];
+          if (su && (su.siteStatus === "HALTED" || su.siteStatus === "SLOW"))
+            rows.push({ schemeId: s.id, name: `${sp.name} (${s.name.slice(0, 40)}…)`, dept: s.department.code, status: su.siteStatus, note: su.bottlenecks });
+        }
+        return rows;
+      })
+      .slice(0, 20);
+
+    // Sector rollup
     const bySector = new Map<string, { sector: string; count: number; cost: number; alloc: number; spent: number; physW: number; w: number; updatedToday: number }>();
     for (const s of schemes) {
-      const key = s.sector;
-      const rec = bySector.get(key) ?? { sector: key, count: 0, cost: 0, alloc: 0, spent: 0, physW: 0, w: 0, updatedToday: 0 };
-      const u = s.updates[0] ?? null;
+      const rec = bySector.get(s.sector) ?? { sector: s.sector, count: 0, cost: 0, alloc: 0, spent: 0, physW: 0, w: 0, updatedToday: 0 };
       rec.count++;
       rec.cost += s.totalCost ?? 0;
       rec.alloc += s.adpAllocation ?? 0;
-      rec.spent += u?.expenditure ?? 0;
+      rec.spent += s.updates[0]?.expenditure ?? 0;
       const w = (s.totalCost ?? 0) > 0 ? (s.totalCost as number) : 1;
       rec.w += w;
-      rec.physW += (u?.physicalProgressPct ?? 0) * w;
-      if (u && sameDay(u.reportDate, today)) rec.updatedToday++;
-      bySector.set(key, rec);
+      rec.physW += (effectivePhysical(s) ?? 0) * w;
+      if (schemeUpdatedToday(s, today)) rec.updatedToday++;
+      bySector.set(s.sector, rec);
     }
     const sectors = [...bySector.values()]
       .map((r) => ({ sector: r.sector, count: r.count, cost: r.cost, alloc: r.alloc, spent: r.spent, avgPhysical: r.w ? r.physW / r.w : 0, updatedToday: r.updatedToday }))
       .sort((a, b) => b.alloc - a.alloc);
 
-    // Initiative rollup (staff always; department sees only their contribution)
+    // Initiative rollup
     const inits = await this.prisma.initiative.findMany({
       orderBy: { number: "asc" },
       include: {
@@ -343,13 +537,21 @@ export class CoreService {
         updates: { orderBy: { reportDate: "desc" }, take: 1 },
         schemes: {
           where: scoped ? { departmentId: user.departmentId ?? "___none___" } : {},
-          include: { updates: { orderBy: { reportDate: "desc" }, take: 1 } },
+          include: this.latestInclude,
         },
       },
     });
     const initiatives = inits
       .map((i) => {
-        const r = rollup(i.schemes.map((s) => ({ cost: s.totalCost, alloc: s.adpAllocation, u: s.updates[0] ?? null })), today);
+        const sItems = i.schemes.map((s) => ({
+          cost: s.totalCost,
+          alloc: s.adpAllocation,
+          stage: s.stage,
+          phys: effectivePhysical(s),
+          u: s.updates[0] ?? null,
+          updatedToday: schemeUpdatedToday(s, today),
+        }));
+        const r = rollup(sItems, today);
         const own = i.updates[0] ?? null;
         return {
           id: i.id,
@@ -370,23 +572,21 @@ export class CoreService {
       .filter((i) => !scoped || i.schemes > 0 || inits.find((x) => x.id === i.id)?.leadDepartment?.id === user.departmentId);
 
     // Compliance by department (staff only)
-    let compliance: { id: string; name: string; code: string; schemes: number; updatedToday: number; reported: number }[] = [];
+    let compliance: { id: string; name: string; code: string; email: string | null; schemes: number; updatedToday: number; reported: number }[] = [];
     if (!scoped) {
       const depts = await this.prisma.department.findMany({
         orderBy: { name: "asc" },
-        include: { schemes: { include: { updates: { orderBy: { reportDate: "desc" }, take: 1 } } } },
+        include: { schemes: { include: this.latestInclude } },
       });
       compliance = depts.map((d) => {
         let updatedToday = 0;
         let reported = 0;
         for (const s of d.schemes) {
-          const u = s.updates[0];
-          if (u) {
-            reported++;
-            if (sameDay(u.reportDate, today)) updatedToday++;
-          }
+          const hasAny = s.updates.length > 0 || s.subProjects.some((sp) => sp.updates.length > 0);
+          if (hasAny) reported++;
+          if (schemeUpdatedToday(s, today)) updatedToday++;
         }
-        return { id: d.id, name: d.name, code: d.code, schemes: d.schemes.length, updatedToday, reported };
+        return { id: d.id, name: d.name, code: d.code, email: d.email, schemes: d.schemes.length, updatedToday, reported };
       });
     }
 
@@ -395,6 +595,7 @@ export class CoreService {
       department: scoped ? { id: user.departmentId, name: user.departmentName } : null,
       totals: roll,
       stageDist,
+      attention,
       sectors,
       initiatives,
       compliance,
@@ -406,8 +607,9 @@ export class CoreService {
   async schemesCsv(user: SessionUser): Promise<string> {
     const schemes = await this.schemes(user);
     const header = [
-      "S.No", "ADP Code", "Scheme", "Sector/Dept", "Initiative", "Total Cost (M)", "ADP Allocation (M)",
-      "Funds Released (M)", "Expenditure (M)", "Financial %", "Physical %", "Stage", "Last Report Date", "Bottlenecks",
+      "S.No", "ADP Code", "Scheme", "Sector/Dept", "Initiative", "Lifecycle Stage", "Total Cost (M)", "ADP Allocation (M)",
+      "Funds Released (M)", "Expenditure (M)", "Financial % (auto)", "Physical % (rolled up)", "Phase", "Site Status",
+      "Manpower", "Machinery", "Last Report Date", "Issues",
     ];
     const lines = [header.join(",")];
     schemes.forEach((s, idx) => {
@@ -419,13 +621,17 @@ export class CoreService {
           csv(s.name),
           csv(s.sector),
           csv(s.initiative ? `#${s.initiative.number} ${s.initiative.shortName}` : ""),
+          s.stage,
           s.totalCost ?? "",
           s.adpAllocation ?? "",
           u?.fundsReleased ?? "",
           u?.expenditure ?? "",
-          u?.financialProgressPct ?? "",
-          u?.physicalProgressPct ?? "",
-          u?.stage ?? "",
+          u?.financialProgressPct != null ? u.financialProgressPct.toFixed(1) : "",
+          s.effectivePhysical != null ? s.effectivePhysical.toFixed(1) : "",
+          csv(u?.phase ?? ""),
+          u?.siteStatus ?? "",
+          u?.manpower ?? "",
+          u?.machinery ?? "",
           u ? new Date(u.reportDate).toISOString().slice(0, 10) : "",
           csv(u?.bottlenecks ?? ""),
         ].join(","),
@@ -442,44 +648,59 @@ function numOrNull(v: unknown): number | null {
   if (!isFinite(n) || n < 0) return null;
   return n;
 }
+function intOrNull(v: unknown): number | null {
+  const n = numOrNull(v);
+  return n == null ? null : Math.round(n);
+}
 function pctOrNull(v: unknown): number | null {
   const n = numOrNull(v);
   if (n == null) return null;
   return Math.max(0, Math.min(100, n));
 }
-function strOrNull(v: unknown): string | null {
+function strOrNull(v: unknown, max = 2000): string | null {
   if (typeof v !== "string") return null;
   const s = v.trim();
-  return s ? s.slice(0, 2000) : null;
+  return s ? s.slice(0, max) : null;
 }
 function sameDay(a: Date, b: Date): boolean {
   return new Date(a).toISOString().slice(0, 10) === new Date(b).toISOString().slice(0, 10);
+}
+function schemeUpdatedToday(
+  s: { updates: { reportDate: Date }[]; subProjects?: { updates: { reportDate: Date }[] }[] },
+  today: Date,
+): boolean {
+  if (s.updates[0] && sameDay(s.updates[0].reportDate, today)) return true;
+  return (s.subProjects ?? []).some((sp) => sp.updates[0] && sameDay(sp.updates[0].reportDate, today));
 }
 function csv(s: string): string {
   return `"${(s || "").replace(/"/g, '""').replace(/\r?\n/g, " ")}"`;
 }
 
 export function rollup(
-  items: { cost: number | null; alloc: number | null; u: { expenditure: number | null; fundsReleased: number | null; physicalProgressPct: number | null; financialProgressPct: number | null; reportDate: Date; stage: SchemeStage } | null }[],
-  today: Date,
+  items: {
+    cost: number | null;
+    alloc: number | null;
+    stage: SchemeStage;
+    phys: number | null;
+    u: { expenditure: number | null; fundsReleased: number | null; financialProgressPct: number | null; reportDate: Date } | null;
+    updatedToday: boolean;
+  }[],
+  _today: Date,
 ) {
   let totalCost = 0, totalAlloc = 0, totalReleased = 0, totalSpent = 0, physW = 0, finW = 0, w = 0;
   let updatedToday = 0, reported = 0, completed = 0;
   for (const it of items) {
     totalCost += it.cost ?? 0;
     totalAlloc += it.alloc ?? 0;
-    const u = it.u;
-    totalReleased += u?.fundsReleased ?? 0;
-    totalSpent += u?.expenditure ?? 0;
+    totalReleased += it.u?.fundsReleased ?? 0;
+    totalSpent += it.u?.expenditure ?? 0;
     const weight = (it.cost ?? 0) > 0 ? (it.cost as number) : 1;
     w += weight;
-    physW += (u?.physicalProgressPct ?? 0) * weight;
-    finW += (u?.financialProgressPct ?? 0) * weight;
-    if (u) {
-      reported++;
-      if (sameDay(u.reportDate, today)) updatedToday++;
-      if (u.stage === "COMPLETED") completed++;
-    }
+    physW += (it.phys ?? 0) * weight;
+    finW += (it.u?.financialProgressPct ?? 0) * weight;
+    if (it.u || it.phys != null) reported++;
+    if (it.updatedToday) updatedToday++;
+    if (it.stage === "COMPLETED" || (it.phys ?? 0) >= 100) completed++;
   }
   return {
     count: items.length,

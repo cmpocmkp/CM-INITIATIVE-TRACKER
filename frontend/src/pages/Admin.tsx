@@ -11,17 +11,66 @@ interface UserRow {
   department: { id: string; name: string; code: string } | null;
 }
 
+interface DeptRow {
+  id: string;
+  code: string;
+  name: string;
+  email: string | null;
+  _count: { schemes: number; ledInitiatives: number };
+}
+
 export default function Admin() {
   const [users, setUsers] = useState<UserRow[] | null>(null);
+  const [depts, setDepts] = useState<DeptRow[] | null>(null);
+  const [emails, setEmails] = useState<Record<string, string>>({});
   const [err, setErr] = useState("");
   const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
   const [target, setTarget] = useState<UserRow | null>(null);
   const [pwd, setPwd] = useState("");
 
   function load() {
     api.get<UserRow[]>("/admin/users").then(setUsers).catch((e) => setErr((e as Error).message));
+    api
+      .get<DeptRow[]>("/departments")
+      .then((d) => {
+        setDepts(d);
+        setEmails(Object.fromEntries(d.map((x) => [x.id, x.email ?? ""])));
+      })
+      .catch((e) => setErr((e as Error).message));
   }
   useEffect(load, []);
+
+  async function saveEmail(d: DeptRow) {
+    setMsg("");
+    try {
+      await api.post(`/admin/departments/${d.id}/email`, { email: emails[d.id] ?? "" });
+      setMsg(`✓ Email saved for ${d.code}`);
+      load();
+    } catch (e) {
+      setMsg(`✗ ${(e as Error).message}`);
+    }
+  }
+
+  async function sendOnboarding(deptIds?: string[]) {
+    setBusy(true);
+    setMsg("");
+    try {
+      const r = await api.post<{ ok: boolean; reason?: string; sent: string[]; noEmail: string[] }>(
+        "/digest/onboarding",
+        deptIds ? { departmentIds: deptIds } : {},
+      );
+      setMsg(
+        r.ok
+          ? `✓ Credentials emailed to: ${r.sent.join(", ") || "none"}${r.noEmail.length ? ` · no email set: ${r.noEmail.join(", ")}` : ""}`
+          : `✗ ${r.reason}`,
+      );
+    } catch (e) {
+      setMsg(`✗ ${(e as Error).message}`);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function reset() {
     if (!target) return;
@@ -36,19 +85,78 @@ export default function Admin() {
   }
 
   if (err) return <ErrorBox message={err} />;
-  if (!users) return <Spinner label="Loading users…" />;
+  if (!users || !depts) return <Spinner label="Loading administration…" />;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <Heading
         title="Administration"
-        subtitle="User accounts — departments sign in with their code. Default department password is 123456 until changed here."
+        subtitle="Department focal emails, onboarding (credentials) emails, and account passwords."
+        action={
+          <button className="btn-primary" onClick={() => sendOnboarding()} disabled={busy}>
+            {busy ? "Sending…" : "✉ Send credentials to all (with email)"}
+          </button>
+        }
       />
-      {msg && (
-        <div className="rounded-lg border border-navy-200 bg-navy-50 px-4 py-2.5 text-[13px] text-navy-800">{msg}</div>
-      )}
+      {msg && <div className="rounded-lg border border-navy-200 bg-navy-50 px-4 py-2.5 text-[13px] text-navy-800">{msg}</div>}
 
       <div className="card overflow-hidden">
+        <div className="border-b border-slate-200 px-5 py-3">
+          <h2 className="text-sm font-bold uppercase tracking-wide text-navy-900">Departments — focal person emails</h2>
+          <p className="mt-0.5 text-[12px] text-slate-500">
+            First email = username + password + instructions. Afterwards, departments with a pending sheet get an automatic reminder each morning (9:00 AM PKT).
+          </p>
+        </div>
+        <div className="scroll-thin overflow-x-auto">
+          <table className="w-full" style={{ minWidth: 760 }}>
+            <thead>
+              <tr className="border-b border-slate-200 bg-slate-50">
+                <th className="th">Code</th>
+                <th className="th">Department</th>
+                <th className="th">Schemes</th>
+                <th className="th" style={{ minWidth: 260 }}>Focal Email</th>
+                <th className="th"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {depts.map((d) => (
+                <tr key={d.id} className="border-b border-slate-100 hover:bg-navy-50/30">
+                  <td className="td font-bold text-navy-800">{d.code}</td>
+                  <td className="td max-w-[280px] truncate" title={d.name}>{d.name}</td>
+                  <td className="td">{d._count.schemes}</td>
+                  <td className="td">
+                    <input
+                      className="input py-1.5 text-[13px]"
+                      type="email"
+                      placeholder="focal.person@dept.gov.pk"
+                      value={emails[d.id] ?? ""}
+                      onChange={(e) => setEmails((p) => ({ ...p, [d.id]: e.target.value }))}
+                    />
+                  </td>
+                  <td className="td whitespace-nowrap text-right">
+                    <button className="btn-ghost mr-2 px-3 py-1 text-xs" onClick={() => saveEmail(d)}>
+                      Save
+                    </button>
+                    <button
+                      className="btn-ghost px-3 py-1 text-xs"
+                      disabled={!(emails[d.id] ?? "").trim() || busy}
+                      onClick={() => sendOnboarding([d.id])}
+                      title="Send username + password to this department"
+                    >
+                      ✉ Credentials
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="card overflow-hidden">
+        <div className="border-b border-slate-200 px-5 py-3">
+          <h2 className="text-sm font-bold uppercase tracking-wide text-navy-900">User accounts</h2>
+        </div>
         <div className="scroll-thin overflow-x-auto">
           <table className="w-full" style={{ minWidth: 760 }}>
             <thead>

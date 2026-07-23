@@ -95,6 +95,27 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Sites needing attention */}
+      {d.attention.length > 0 && (
+        <div className="card border-l-4 border-l-rose-500 p-5">
+          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-rose-700">
+            ⚠ Sites Halted / Slow — needs attention
+          </h2>
+          <div className="space-y-2">
+            {d.attention.map((a, i) => (
+              <Link key={i} to={`/schemes/${a.schemeId}`} className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-[13px] hover:border-rose-300">
+                <span className={a.status === "HALTED" ? "badge border-rose-600 bg-rose-600 text-white" : "badge border-amber-300 bg-amber-50 text-amber-700"}>
+                  {a.status}
+                </span>
+                <span className="font-bold text-navy-800">{a.dept}</span>
+                <span className="flex-1 truncate text-slate-700">{a.name}</span>
+                {a.note && <span className="text-[12px] italic text-rose-600">{a.note}</span>}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Charts */}
       <div className="grid gap-6 xl:grid-cols-5">
         <div className="card p-5 xl:col-span-3">
@@ -104,7 +125,9 @@ export default function Dashboard() {
           <SectorBars data={d.sectors.map((s) => ({ sector: s.sector, alloc: s.alloc, spent: s.spent }))} />
         </div>
         <div className="card p-5 xl:col-span-2">
-          <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-navy-900">Schemes by Stage</h2>
+          <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-navy-900">
+            Lifecycle Stage (PC-1 → Completion)
+          </h2>
           <StageDonut dist={d.stageDist} />
         </div>
       </div>

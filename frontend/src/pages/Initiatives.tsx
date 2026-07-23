@@ -3,6 +3,20 @@ import { Link } from "react-router-dom";
 import { api, Initiative, fmtM, fmtPct } from "../api";
 import { Heading, Spinner, ErrorBox, Bar } from "../ui";
 
+function schemePhys(s: Initiative["schemes"][number]): number {
+  const subs = s.subProjects ?? [];
+  if (subs.length) {
+    let w = 0, acc = 0;
+    for (const sp of subs) {
+      const weight = sp.weight && sp.weight > 0 ? sp.weight : 1;
+      w += weight;
+      acc += (sp.updates?.[0]?.physicalProgressPct ?? 0) * weight;
+    }
+    return w ? acc / w : 0;
+  }
+  return s.updates?.[0]?.physicalProgressPct ?? 0;
+}
+
 function roll(i: Initiative) {
   let cost = 0, alloc = 0, spent = 0, physW = 0, w = 0, updated = 0;
   for (const s of i.schemes) {
@@ -12,8 +26,8 @@ function roll(i: Initiative) {
     spent += u?.expenditure ?? 0;
     const weight = (s.totalCost ?? 0) > 0 ? (s.totalCost as number) : 1;
     w += weight;
-    physW += (u?.physicalProgressPct ?? 0) * weight;
-    if (u) updated++;
+    physW += schemePhys(s) * weight;
+    if (u || (s.subProjects ?? []).some((sp) => sp.updates?.length)) updated++;
   }
   const own = i.updates?.[0];
   const phys = i.schemes.length ? (w ? physW / w : 0) : own?.physicalProgressPct ?? 0;

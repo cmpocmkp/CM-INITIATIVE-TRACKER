@@ -37,7 +37,7 @@ export class DigestService {
       .filter(Boolean);
   }
 
-  /** 6:00 PM Pakistan time, every day. */
+  /** 6:00 PM Pakistan time, every day — CMPO leadership digest. */
   @Cron("0 18 * * *", { timeZone: "Asia/Karachi" })
   async scheduled() {
     this.logger.log("Running daily digest cron…");
@@ -47,6 +47,105 @@ export class DigestService {
     } catch (e) {
       this.logger.error(`Digest failed: ${(e as Error).message}`);
     }
+  }
+
+  /** 9:00 AM Pakistan time — remind departments that haven't filled today's sheet. */
+  @Cron("0 9 * * *", { timeZone: "Asia/Karachi" })
+  async scheduledReminders() {
+    try {
+      const res = await this.sendReminders();
+      this.logger.log(`Reminders: ${JSON.stringify(res)}`);
+    } catch (e) {
+      this.logger.error(`Reminders failed: ${(e as Error).message}`);
+    }
+  }
+
+  /** Departments (with an email set) that haven't submitted anything today get a reminder. */
+  async sendReminders(): Promise<{ ok: boolean; reason?: string; sent: string[]; skipped: number }> {
+    const transport = this.transport();
+    if (!transport) return { ok: false, reason: "Gmail credentials not configured", sent: [], skipped: 0 };
+
+    const d = await this.core.dashboard(SYSTEM_USER);
+    const laggards = d.compliance.filter((c: any) => c.schemes > 0 && c.updatedToday === 0 && c.email);
+    const appUrl = process.env.APP_URL || "#";
+    const sent: string[] = [];
+
+    for (const dept of laggards) {
+      await transport.sendMail({
+        from: `CM Initiative Sector <${process.env.GMAIL_USER}>`,
+        to: dept.email as string,
+        subject: `Reminder: Daily progress entry pending — ${dept.code} · ${d.today}`,
+        html: `
+<div style="font-family:Segoe UI,Arial,sans-serif;max-width:560px;margin:0 auto;border:1px solid #e5eaf0;border-radius:12px;overflow:hidden;">
+  <div style="background:#0b1f3a;color:#fff;padding:16px 22px;">
+    <b>CM Initiative Sector</b><span style="opacity:.7"> · Government of Khyber Pakhtunkhwa</span>
+  </div>
+  <div style="padding:20px 22px;font-size:14px;color:#1e293b;line-height:1.6;">
+    <p>Dear <b>${dept.name}</b>,</p>
+    <p>Today's progress entry for your <b>${dept.schemes} priority scheme(s)</b> has not been submitted yet.
+    Please fill your daily sheet — it takes a few minutes.</p>
+    <p style="text-align:center;margin:22px 0;">
+      <a href="${appUrl}/entry" style="background:#0b1f3a;color:#fff;text-decoration:none;padding:11px 26px;border-radius:8px;font-weight:600;">Fill Today's Sheet</a>
+    </p>
+    <p style="font-size:12px;color:#64748b;">Sign in with your department code <b>${dept.code}</b>. This reminder is sent each morning until the day's entry is received.</p>
+  </div>
+</div>`,
+      });
+      sent.push(dept.code);
+    }
+    return { ok: true, sent, skipped: laggards.length - sent.length };
+  }
+
+  /** One-time onboarding email: credentials + how to use. Sent per department that has an email. */
+  async sendOnboarding(deptIds?: string[]): Promise<{ ok: boolean; reason?: string; sent: string[]; noEmail: string[] }> {
+    const transport = this.transport();
+    if (!transport) return { ok: false, reason: "Gmail credentials not configured", sent: [], noEmail: [] };
+
+    const where = deptIds && deptIds.length ? { id: { in: deptIds } } : {};
+    const depts = await this.prisma.department.findMany({
+      where,
+      include: { _count: { select: { schemes: true } } },
+      orderBy: { name: "asc" },
+    });
+    const appUrl = process.env.APP_URL || "#";
+    const defaultPwd = process.env.DEPARTMENT_DEFAULT_PASSWORD || "123456";
+    const sent: string[] = [];
+    const noEmail: string[] = [];
+
+    for (const dept of depts) {
+      if (!dept.email) {
+        noEmail.push(dept.code);
+        continue;
+      }
+      await transport.sendMail({
+        from: `CM Initiative Sector <${process.env.GMAIL_USER}>`,
+        to: dept.email,
+        subject: `Your login — CM Initiative Sector (${dept.code})`,
+        html: `
+<div style="font-family:Segoe UI,Arial,sans-serif;max-width:560px;margin:0 auto;border:1px solid #e5eaf0;border-radius:12px;overflow:hidden;">
+  <div style="background:#0b1f3a;color:#fff;padding:16px 22px;">
+    <b>CM Initiative Sector</b><span style="opacity:.7"> · Government of Khyber Pakhtunkhwa</span>
+  </div>
+  <div style="padding:20px 22px;font-size:14px;color:#1e293b;line-height:1.6;">
+    <p>Dear <b>${dept.name}</b>,</p>
+    <p>The Chief Minister's Office is tracking daily progress of CM priority schemes.
+    Your department has <b>${dept._count.schemes} scheme(s)</b> on the platform.</p>
+    <table style="border-collapse:collapse;margin:14px 0;font-size:14px;">
+      <tr><td style="padding:6px 14px;border:1px solid #e5eaf0;background:#f8fafc;">Web address</td><td style="padding:6px 14px;border:1px solid #e5eaf0;"><a href="${appUrl}">${appUrl}</a></td></tr>
+      <tr><td style="padding:6px 14px;border:1px solid #e5eaf0;background:#f8fafc;">Username</td><td style="padding:6px 14px;border:1px solid #e5eaf0;"><b>${dept.code}</b></td></tr>
+      <tr><td style="padding:6px 14px;border:1px solid #e5eaf0;background:#f8fafc;">Password</td><td style="padding:6px 14px;border:1px solid #e5eaf0;"><b>${defaultPwd}</b> <span style="color:#64748b;">(please change after first login)</span></td></tr>
+    </table>
+    <p><b>Every day:</b> open <a href="${appUrl}/entry">Daily Data Entry</a> and fill, for each scheme / work item:
+    current phase, % complete from start, work done today, manpower &amp; machinery on site, site status, and any issues needing decisions.
+    Figures are cumulative; the system computes the daily increase itself.</p>
+    <p>You can add work items (e.g. individual underpasses) under any scheme with <b>+ Add work item</b>.</p>
+    <p style="font-size:12px;color:#64748b;">A reminder is sent each morning if the day's entry is pending. Your data is visible only to your department and the CM Office.</p>
+  </div>
+</div>`,
+      });
+      sent.push(dept.code);
+    }
+    return { ok: true, sent, noEmail };
   }
 
   async send(): Promise<{ ok: boolean; reason?: string; recipients?: string[] }> {
@@ -140,6 +239,15 @@ export class DigestService {
         laggards
           ? `<div style="margin-top:16px;padding:10px 12px;background:#fdf3e2;border:1px solid #f5d9a8;border-radius:8px;font-size:12px;color:#92400e;">
               <b>No update submitted today:</b> ${laggards}
+            </div>`
+          : ""
+      }
+      ${
+        (d.attention?.length ?? 0) > 0
+          ? `<div style="margin-top:12px;padding:10px 12px;background:#fdeaea;border:1px solid #f3c4c4;border-radius:8px;font-size:12px;color:#991b1b;">
+              <b>⚠ Sites halted / slow:</b><br/>${d.attention
+                .map((a: any) => `${a.status === "HALTED" ? "⛔" : "🐢"} <b>${a.dept}</b> — ${a.name}${a.note ? ` <i>(${a.note})</i>` : ""}`)
+                .join("<br/>")}
             </div>`
           : ""
       }

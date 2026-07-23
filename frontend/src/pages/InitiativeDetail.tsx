@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, Initiative, fmtM, fmtPct, fmtDate } from "../api";
-import { Heading, Spinner, ErrorBox, Bar, StageBadge, Empty } from "../ui";
+import { Heading, Spinner, ErrorBox, Bar, StageBadge, SiteBadge, Empty } from "../ui";
 import { TrendLine } from "../charts";
 
 export default function InitiativeDetail() {
@@ -93,6 +93,7 @@ export default function InitiativeDetail() {
               <tbody>
                 {i.schemes.map((s) => {
                   const u = s.updates?.[0];
+                  const phys = s.effectivePhysical ?? u?.physicalProgressPct ?? null;
                   return (
                     <tr key={s.id} className="border-b border-slate-100 hover:bg-navy-50/40">
                       <td className="td max-w-[380px]">
@@ -107,12 +108,12 @@ export default function InitiativeDetail() {
                       <td className="td whitespace-nowrap text-right">{u?.expenditure?.toLocaleString() ?? "—"}</td>
                       <td className="td w-40">
                         <div className="flex items-center gap-2">
-                          <Bar value={u?.physicalProgressPct ?? 0} className="w-24" />
-                          <span className="text-xs font-semibold">{fmtPct(u?.physicalProgressPct)}</span>
+                          <Bar value={phys ?? 0} className="w-24" />
+                          <span className="text-xs font-semibold">{fmtPct(phys)}</span>
                         </div>
                       </td>
                       <td className="td">
-                        <StageBadge stage={u?.stage} />
+                        <StageBadge stage={s.stage} />
                       </td>
                       <td className="td whitespace-nowrap text-[12px] text-slate-500">{fmtDate(u?.reportDate)}</td>
                     </tr>
@@ -134,8 +135,9 @@ export default function InitiativeDetail() {
               <div key={u.id} className="rounded-lg border border-slate-200 p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2 text-[12px] text-slate-500">
                   <span className="font-semibold text-navy-800">{fmtDate(u.reportDate)}</span>
-                  <span>
-                    phys {fmtPct(u.physicalProgressPct)} · fin {fmtPct(u.financialProgressPct)} <StageBadge stage={u.stage} />
+                  <span className="flex items-center gap-2">
+                    {u.phase && <span className="text-slate-600">{u.phase}</span>}
+                    phys {fmtPct(u.physicalProgressPct)} <SiteBadge status={u.siteStatus} />
                   </span>
                 </div>
                 {u.narrative && <p className="mt-1.5 text-[13px] text-slate-700">{u.narrative}</p>}

@@ -89,6 +89,7 @@ export default function Schemes() {
             <tbody>
               {filtered.map((s, idx) => {
                 const u = s.updates?.[0];
+                const phys = s.effectivePhysical ?? u?.physicalProgressPct ?? null;
                 return (
                   <tr key={s.id} className="border-b border-slate-100 hover:bg-navy-50/40">
                     <td className="td text-[12px] text-slate-400">{idx + 1}</td>
@@ -99,6 +100,9 @@ export default function Schemes() {
                       </Link>
                       {s.isPRP && (
                         <span className="ml-1.5 rounded bg-navy-100 px-1.5 py-0.5 text-[10px] font-bold text-navy-700">PRP</span>
+                      )}
+                      {(s.subProjects?.length ?? 0) > 0 && (
+                        <span className="ml-1.5 text-[10px] font-semibold text-slate-400">{s.subProjects!.length} work items</span>
                       )}
                     </td>
                     <td className="td whitespace-nowrap text-[12px]">{s.sector}</td>
@@ -116,12 +120,12 @@ export default function Schemes() {
                     <td className="td whitespace-nowrap text-right">{u?.expenditure?.toLocaleString() ?? "—"}</td>
                     <td className="td w-36">
                       <div className="flex items-center gap-2">
-                        <Bar value={u?.physicalProgressPct ?? 0} className="w-20" />
-                        <span className="text-xs font-semibold">{fmtPct(u?.physicalProgressPct)}</span>
+                        <Bar value={phys ?? 0} className="w-20" />
+                        <span className="text-xs font-semibold">{fmtPct(phys)}</span>
                       </div>
                     </td>
                     <td className="td">
-                      <StageBadge stage={u?.stage} />
+                      <StageBadge stage={s.stage} />
                     </td>
                     <td className="td whitespace-nowrap text-[12px] text-slate-500">{fmtDate(u?.reportDate)}</td>
                   </tr>

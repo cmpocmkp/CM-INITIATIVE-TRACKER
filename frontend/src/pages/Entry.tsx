@@ -1,66 +1,125 @@
 import { useEffect, useMemo, useState } from "react";
-import { api, SheetRow, Stage, STAGES, fmtM, todayStr } from "../api";
-import { Heading, Spinner, ErrorBox, cn } from "../ui";
+import { api, SheetRow, SheetSubRow, SiteStatus, SITE_STATUSES, Update, fmtDelta, todayStr } from "../api";
+import { Heading, Spinner, ErrorBox, Delta, cn } from "../ui";
 
 type Draft = {
+  phase: string;
+  physicalProgressPct: string;
+  narrative: string;
+  manpower: string;
+  machinery: string;
+  siteStatus: SiteStatus | "";
+  bottlenecks: string;
   fundsReleased: string;
   expenditure: string;
-  financialProgressPct: string;
-  physicalProgressPct: string;
-  stage: Stage | "";
-  narrative: string;
-  bottlenecks: string;
 };
 
 const emptyDraft = (): Draft => ({
+  phase: "",
+  physicalProgressPct: "",
+  narrative: "",
+  manpower: "",
+  machinery: "",
+  siteStatus: "",
+  bottlenecks: "",
   fundsReleased: "",
   expenditure: "",
-  financialProgressPct: "",
-  physicalProgressPct: "",
-  stage: "",
-  narrative: "",
-  bottlenecks: "",
 });
 
-function fromUpdate(u: SheetRow["today"]): Draft {
+function fromUpdate(u: Update | null): Draft {
   if (!u) return emptyDraft();
   return {
+    phase: u.phase ?? "",
+    physicalProgressPct: u.physicalProgressPct?.toString() ?? "",
+    narrative: u.narrative ?? "",
+    manpower: u.manpower?.toString() ?? "",
+    machinery: u.machinery?.toString() ?? "",
+    siteStatus: u.siteStatus ?? "",
+    bottlenecks: u.bottlenecks ?? "",
     fundsReleased: u.fundsReleased?.toString() ?? "",
     expenditure: u.expenditure?.toString() ?? "",
-    financialProgressPct: u.financialProgressPct?.toString() ?? "",
-    physicalProgressPct: u.physicalProgressPct?.toString() ?? "",
-    stage: u.stage ?? "",
-    narrative: u.narrative ?? "",
-    bottlenecks: u.bottlenecks ?? "",
   };
 }
 
-const key = (r: SheetRow) => `${r.entityType}:${r.entityId}`;
+type FlatRow = {
+  key: string;
+  entityType: "SCHEME" | "INITIATIVE" | "SUBPROJECT";
+  entityId: string;
+  name: string;
+  tag: string | null; // INITIATIVE / PRP / null
+  adpCode: string | null;
+  allocation: number | null;
+  hasSubs: boolean; // scheme with sub-items → % is rolled up, not typed here
+  isSub: boolean;
+  parentSchemeId?: string;
+  today: Update | null;
+  prev: Update | null;
+};
+
+function flatten(rows: SheetRow[]): FlatRow[] {
+  const out: FlatRow[] = [];
+  for (const r of rows) {
+    out.push({
+      key: `${r.entityType}:${r.entityId}`,
+      entityType: r.entityType,
+      entityId: r.entityId,
+      name: r.name,
+      tag: r.entityType === "INITIATIVE" ? "INITIATIVE" : r.isPRP ? "PRP" : null,
+      adpCode: r.adpCode,
+      allocation: r.allocation,
+      hasSubs: r.hasSubs,
+      isSub: false,
+      today: r.today,
+      prev: r.prev,
+    });
+    for (const s of r.subRows) {
+      out.push({
+        key: `SUBPROJECT:${s.entityId}`,
+        entityType: "SUBPROJECT",
+        entityId: s.entityId,
+        name: s.name,
+        tag: null,
+        adpCode: null,
+        allocation: null,
+        hasSubs: false,
+        isSub: true,
+        parentSchemeId: r.entityId,
+        today: s.today,
+        prev: s.prev,
+      });
+    }
+  }
+  return out;
+}
 
 export default function Entry() {
   const [date, setDate] = useState(todayStr());
-  const [rows, setRows] = useState<SheetRow[] | null>(null);
+  const [sheet, setSheet] = useState<SheetRow[] | null>(null);
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [baseline, setBaseline] = useState<Record<string, string>>({});
   const [savedKeys, setSavedKeys] = useState<Set<string>>(new Set());
   const [err, setErr] = useState("");
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
+  const [addFor, setAddFor] = useState<{ schemeId: string; schemeName: string } | null>(null);
+  const [newSub, setNewSub] = useState({ name: "", weight: "", targetDate: "" });
+
+  const rows = useMemo(() => (sheet ? flatten(sheet) : []), [sheet]);
 
   async function load(d: string) {
-    setRows(null);
+    setSheet(null);
     setErr("");
     setSavedKeys(new Set());
     try {
       const res = await api.get<{ date: string; rows: SheetRow[] }>(`/progress/sheet?date=${d}`);
       const dr: Record<string, Draft> = {};
       const base: Record<string, string> = {};
-      for (const r of res.rows) {
-        const draft = fromUpdate(r.today);
-        dr[key(r)] = draft;
-        base[key(r)] = JSON.stringify(draft);
+      for (const fr of flatten(res.rows)) {
+        const draft = fromUpdate(fr.today);
+        dr[fr.key] = draft;
+        base[fr.key] = JSON.stringify(draft);
       }
-      setRows(res.rows);
+      setSheet(res.rows);
       setDrafts(dr);
       setBaseline(base);
     } catch (e) {
@@ -88,20 +147,8 @@ export default function Entry() {
     });
   }
 
-  /** Auto-suggest financial % when expenditure entered and % empty. */
-  function onSpentBlur(r: SheetRow) {
-    const k = key(r);
-    const d = drafts[k];
-    if (!d || d.financialProgressPct !== "" || d.expenditure === "") return;
-    const alloc = r.adpAllocation;
-    const spent = Number(d.expenditure);
-    if (alloc && alloc > 0 && isFinite(spent)) {
-      set(k, "financialProgressPct", Math.min(100, (spent / alloc) * 100).toFixed(1));
-    }
-  }
-
   async function saveAll() {
-    if (!rows || !dirtyKeys.length) return;
+    if (!dirtyKeys.length) return;
     setSaving(true);
     setErr("");
     setNotice("");
@@ -112,24 +159,26 @@ export default function Entry() {
         return {
           entityType,
           entityId,
+          phase: d.phase || null,
+          physicalProgressPct: d.physicalProgressPct === "" ? null : Number(d.physicalProgressPct),
+          narrative: d.narrative || null,
+          manpower: d.manpower === "" ? null : Number(d.manpower),
+          machinery: d.machinery === "" ? null : Number(d.machinery),
+          siteStatus: d.siteStatus === "" ? null : d.siteStatus,
+          bottlenecks: d.bottlenecks || null,
           fundsReleased: d.fundsReleased === "" ? null : Number(d.fundsReleased),
           expenditure: d.expenditure === "" ? null : Number(d.expenditure),
-          financialProgressPct: d.financialProgressPct === "" ? null : Number(d.financialProgressPct),
-          physicalProgressPct: d.physicalProgressPct === "" ? null : Number(d.physicalProgressPct),
-          stage: d.stage === "" ? null : d.stage,
-          narrative: d.narrative || null,
-          bottlenecks: d.bottlenecks || null,
         };
       });
-      const res = await api.post<{ ok: boolean; saved: number; errors: string[] }>("/progress/sheet", {
-        date,
-        entries,
-      });
+      const res = await api.post<{ ok: boolean; saved: number; errors: string[] }>("/progress/sheet", { date, entries });
       const nb = { ...baseline };
       for (const k of dirtyKeys) nb[k] = JSON.stringify(drafts[k]);
       setBaseline(nb);
       setSavedKeys(new Set(dirtyKeys));
-      setNotice(`Saved ${res.saved} entr${res.saved === 1 ? "y" : "ies"} for ${date}. ${res.errors.length ? `Errors: ${res.errors.join("; ")}` : ""}`);
+      setNotice(
+        `Saved ${res.saved} entr${res.saved === 1 ? "y" : "ies"} for ${date}.` +
+          (res.errors.length ? ` Errors: ${res.errors.join("; ")}` : ""),
+      );
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -137,40 +186,47 @@ export default function Entry() {
     }
   }
 
-  if (err && !rows) return <ErrorBox message={err} />;
-  if (!rows) return <Spinner label="Loading your data sheet…" />;
+  async function createSub() {
+    if (!addFor || !newSub.name.trim()) return;
+    try {
+      await api.post("/subprojects", {
+        schemeId: addFor.schemeId,
+        name: newSub.name.trim(),
+        weight: newSub.weight === "" ? undefined : Number(newSub.weight),
+        targetDate: newSub.targetDate || undefined,
+      });
+      setAddFor(null);
+      setNewSub({ name: "", weight: "", targetDate: "" });
+      await load(date);
+    } catch (e) {
+      setErr((e as Error).message);
+    }
+  }
 
-  const numCell = (r: SheetRow, field: keyof Draft, placeholder?: string) => {
-    const k = key(r);
-    const dirty = JSON.stringify(drafts[k]) !== baseline[k];
-    return (
-      <input
-        type="number"
-        min={0}
-        step="any"
-        className={cn("cell text-right", dirty && drafts[k][field] !== JSON.parse(baseline[k] || "{}")[field] && "cell-dirty")}
-        value={drafts[k]?.[field] ?? ""}
-        placeholder={placeholder}
-        onChange={(e) => set(k, field, e.target.value)}
-        onBlur={field === "expenditure" ? () => onSpentBlur(r) : undefined}
-      />
-    );
-  };
+  if (err && !sheet) return <ErrorBox message={err} />;
+  if (!sheet) return <Spinner label="Loading your data sheet…" />;
+
+  const cellNum = (fr: FlatRow, field: keyof Draft, opts?: { placeholder?: string; disabled?: boolean; w?: string }) => (
+    <input
+      type="number"
+      min={0}
+      step="any"
+      disabled={opts?.disabled}
+      className={cn("cell text-right", opts?.disabled && "cursor-not-allowed text-slate-300")}
+      value={drafts[fr.key]?.[field] ?? ""}
+      placeholder={opts?.placeholder}
+      onChange={(e) => set(fr.key, field, e.target.value)}
+    />
+  );
 
   return (
     <div className="space-y-4">
       <Heading
         title="Daily Data Entry"
-        subtitle="Fill like a spreadsheet — figures are cumulative, Rs in millions. Only your department's entities are shown."
+        subtitle="Like a spreadsheet: % is cumulative from start — the system computes today's increase (Δ) itself. Money (Rs M) is entered at scheme level."
         action={
           <div className="flex items-center gap-3">
-            <input
-              type="date"
-              className="input w-auto"
-              value={date}
-              max={todayStr()}
-              onChange={(e) => setDate(e.target.value)}
-            />
+            <input type="date" className="input w-auto" value={date} max={todayStr()} onChange={(e) => setDate(e.target.value)} />
             <button className="btn-primary" onClick={saveAll} disabled={saving || !dirtyKeys.length}>
               {saving ? "Saving…" : `Save All${dirtyKeys.length ? ` (${dirtyKeys.length})` : ""}`}
             </button>
@@ -178,91 +234,108 @@ export default function Entry() {
         }
       />
 
-      {notice && (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-[13px] text-emerald-800">
-          ✓ {notice}
-        </div>
-      )}
+      {notice && <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-[13px] text-emerald-800">✓ {notice}</div>}
       {err && <ErrorBox message={err} />}
 
       <div className="card overflow-hidden">
         <div className="scroll-thin overflow-x-auto">
-          <table className="w-full border-collapse" style={{ minWidth: 1350 }}>
+          <table className="w-full border-collapse" style={{ minWidth: 1500 }}>
             <thead>
               <tr className="border-b border-slate-200 bg-navy-900 text-white">
-                <th className="sticky left-0 z-10 bg-navy-900 px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider" style={{ minWidth: 320 }}>
-                  Scheme / Initiative
+                <th className="sticky left-0 z-10 bg-navy-900 px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider" style={{ minWidth: 300 }}>
+                  Scheme / Work Item
                 </th>
-                <th className="th !text-white/70">ADP #</th>
-                <th className="th !text-right !text-white/70">Alloc (M)</th>
+                <th className="th !text-white/70" style={{ minWidth: 140 }}>Current Phase</th>
+                <th className="th !text-right !text-white/70">% Complete</th>
+                <th className="th !text-center !text-white/70">Δ Today</th>
+                <th className="th !text-white/70" style={{ minWidth: 200 }}>Work Done Today</th>
+                <th className="th !text-right !text-white/70">Manpower</th>
+                <th className="th !text-right !text-white/70">Machinery</th>
+                <th className="th !text-white/70">Site Status</th>
+                <th className="th !text-white/70" style={{ minWidth: 160 }}>Issues / Needs Decision</th>
                 <th className="th !text-right !text-white/70">Released (M)</th>
                 <th className="th !text-right !text-white/70">Spent (M)</th>
-                <th className="th !text-right !text-white/70">Fin %</th>
-                <th className="th !text-right !text-white/70">Phys %</th>
-                <th className="th !text-white/70">Stage</th>
-                <th className="th !text-white/70" style={{ minWidth: 220 }}>
-                  Today&apos;s Progress
-                </th>
-                <th className="th !text-white/70" style={{ minWidth: 180 }}>
-                  Bottlenecks
-                </th>
                 <th className="th !text-center !text-white/70">✓</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((r, idx) => {
-                const k = key(r);
-                const d = drafts[k] ?? emptyDraft();
-                const dirty = JSON.stringify(d) !== baseline[k];
-                const saved = savedKeys.has(k);
-                const isInit = r.entityType === "INITIATIVE";
+              {rows.map((fr) => {
+                const d = drafts[fr.key] ?? emptyDraft();
+                const dirty = JSON.stringify(d) !== baseline[fr.key];
+                const saved = savedKeys.has(fr.key);
+                const isInit = fr.entityType === "INITIATIVE";
+                const schemeWithSubs = fr.entityType === "SCHEME" && fr.hasSubs;
+                const prevPct = fr.prev?.physicalProgressPct ?? null;
+                const typedPct = d.physicalProgressPct === "" ? (fr.today?.physicalProgressPct ?? null) : Number(d.physicalProgressPct);
+                const delta = fmtDelta(typedPct, prevPct);
+
                 return (
                   <tr
-                    key={k}
+                    key={fr.key}
                     className={cn(
                       "border-b border-slate-100",
-                      isInit ? "bg-navy-50/60" : idx % 2 ? "bg-slate-50/50" : "bg-white",
-                      dirty && "bg-amber-50/60",
+                      isInit ? "bg-navy-50/70" : fr.isSub ? "bg-white" : "bg-slate-50/70",
+                      dirty && "!bg-amber-50/70",
                     )}
                   >
-                    <td
-                      className={cn(
-                        "sticky left-0 z-10 max-w-[340px] px-3 py-2 text-[13px]",
-                        isInit ? "bg-navy-50" : dirty ? "bg-amber-50" : "bg-white",
-                      )}
-                    >
-                      <div className={cn("font-medium leading-snug", isInit ? "text-navy-800" : "text-slate-800")}>
-                        {isInit && (
-                          <span className="mr-1.5 rounded bg-navy-800 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                            INITIATIVE
-                          </span>
-                        )}
-                        {r.isPRP && (
-                          <span className="mr-1.5 rounded bg-navy-100 px-1.5 py-0.5 text-[10px] font-bold text-navy-700">
-                            PRP
-                          </span>
-                        )}
-                        {r.name}
-                      </div>
-                      {r.latest && (
-                        <div className="mt-0.5 text-[11px] text-slate-400">
-                          last: {new Date(r.latest.reportDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })} · phys{" "}
-                          {r.latest.physicalProgressPct ?? "—"}%
+                    <td className={cn("sticky left-0 z-10 px-3 py-2 text-[13px]", isInit ? "bg-navy-50" : dirty ? "bg-amber-50" : fr.isSub ? "bg-white" : "bg-slate-50")}>
+                      <div className={cn("flex items-start gap-1.5 leading-snug", fr.isSub && "pl-5")}>
+                        {fr.isSub && <span className="mt-0.5 text-navy-300">└</span>}
+                        <div className="min-w-0">
+                          <div className={cn("font-medium", isInit ? "text-navy-800" : fr.isSub ? "text-slate-700" : "text-slate-900")}>
+                            {fr.tag && (
+                              <span className={cn("mr-1.5 rounded px-1.5 py-0.5 text-[10px] font-bold", fr.tag === "INITIATIVE" ? "bg-navy-800 text-white" : "bg-navy-100 text-navy-700")}>
+                                {fr.tag}
+                              </span>
+                            )}
+                            {fr.name}
+                            {fr.adpCode && <span className="ml-1.5 text-[11px] text-slate-400">#{fr.adpCode}</span>}
+                          </div>
+                          <div className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-400">
+                            {fr.prev && (
+                              <>was {fr.prev.physicalProgressPct ?? "—"}% on {new Date(fr.prev.reportDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}</>
+                            )}
+                            {fr.entityType === "SCHEME" && (
+                              <button
+                                className="font-semibold text-navy-500 hover:text-navy-700 hover:underline"
+                                onClick={() => setAddFor({ schemeId: fr.entityId, schemeName: fr.name })}
+                              >
+                                + Add work item
+                              </button>
+                            )}
+                            {schemeWithSubs && <span className="italic">% rolls up from work items</span>}
+                          </div>
                         </div>
-                      )}
+                      </div>
                     </td>
-                    <td className="td whitespace-nowrap text-[12px] text-slate-500">{r.adpCode ?? "—"}</td>
-                    <td className="td whitespace-nowrap text-right text-[12px] text-slate-500">
-                      {r.adpAllocation != null ? r.adpAllocation.toLocaleString() : "—"}
+                    <td className="border-l border-slate-100 p-0">
+                      <input
+                        className="cell"
+                        list="phase-suggestions"
+                        value={d.phase}
+                        placeholder={fr.prev?.phase ?? "e.g. piling / earthwork"}
+                        onChange={(e) => set(fr.key, "phase", e.target.value)}
+                        disabled={schemeWithSubs}
+                      />
                     </td>
-                    <td className="w-28 border-l border-slate-100 p-0">{numCell(r, "fundsReleased", r.latest?.fundsReleased?.toString())}</td>
-                    <td className="w-28 border-l border-slate-100 p-0">{numCell(r, "expenditure", r.latest?.expenditure?.toString())}</td>
-                    <td className="w-20 border-l border-slate-100 p-0">{numCell(r, "financialProgressPct", r.latest?.financialProgressPct?.toString())}</td>
-                    <td className="w-20 border-l border-slate-100 p-0">{numCell(r, "physicalProgressPct", r.latest?.physicalProgressPct?.toString())}</td>
-                    <td className="w-36 border-l border-slate-100 p-0">
-                      <select className="cell" value={d.stage} onChange={(e) => set(k, "stage", e.target.value)}>
-                        <option value="">{r.latest ? `(${r.latest.stage.replace(/_/g, " ").toLowerCase()})` : "— select —"}</option>
-                        {STAGES.map((s) => (
+                    <td className="w-24 border-l border-slate-100 p-0">
+                      {cellNum(fr, "physicalProgressPct", {
+                        placeholder: prevPct != null ? String(prevPct) : undefined,
+                        disabled: schemeWithSubs,
+                      })}
+                    </td>
+                    <td className="w-20 border-l border-slate-100 text-center">
+                      <Delta value={schemeWithSubs ? null : delta} />
+                    </td>
+                    <td className="border-l border-slate-100 p-0">
+                      <input className="cell" value={d.narrative} placeholder="what moved on ground today…" onChange={(e) => set(fr.key, "narrative", e.target.value)} />
+                    </td>
+                    <td className="w-24 border-l border-slate-100 p-0">{cellNum(fr, "manpower", { placeholder: fr.prev?.manpower?.toString(), disabled: schemeWithSubs })}</td>
+                    <td className="w-24 border-l border-slate-100 p-0">{cellNum(fr, "machinery", { placeholder: fr.prev?.machinery?.toString(), disabled: schemeWithSubs })}</td>
+                    <td className="w-32 border-l border-slate-100 p-0">
+                      <select className="cell" value={d.siteStatus} onChange={(e) => set(fr.key, "siteStatus", e.target.value)} disabled={schemeWithSubs}>
+                        <option value="">{fr.prev ? `(${fr.prev.siteStatus.replace(/_/g, " ").toLowerCase()})` : "— select —"}</option>
+                        {SITE_STATUSES.map((s) => (
                           <option key={s.value} value={s.value}>
                             {s.label}
                           </option>
@@ -270,49 +343,75 @@ export default function Entry() {
                       </select>
                     </td>
                     <td className="border-l border-slate-100 p-0">
-                      <input
-                        className="cell"
-                        value={d.narrative}
-                        placeholder="what moved today…"
-                        onChange={(e) => set(k, "narrative", e.target.value)}
-                      />
+                      <input className="cell" value={d.bottlenecks} placeholder="blocker / decision needed" onChange={(e) => set(fr.key, "bottlenecks", e.target.value)} />
                     </td>
-                    <td className="border-l border-slate-100 p-0">
-                      <input
-                        className="cell"
-                        value={d.bottlenecks}
-                        placeholder="issues / blockers"
-                        onChange={(e) => set(k, "bottlenecks", e.target.value)}
-                      />
+                    <td className="w-24 border-l border-slate-100 p-0">
+                      {fr.entityType === "SCHEME" ? cellNum(fr, "fundsReleased", { placeholder: fr.prev?.fundsReleased?.toString() }) : <div className="cell cursor-not-allowed text-center text-slate-300">—</div>}
+                    </td>
+                    <td className="w-24 border-l border-slate-100 p-0">
+                      {fr.entityType === "SCHEME" ? cellNum(fr, "expenditure", { placeholder: fr.prev?.expenditure?.toString() }) : <div className="cell cursor-not-allowed text-center text-slate-300">—</div>}
                     </td>
                     <td className="w-10 text-center">
-                      {saved ? (
-                        <span className="text-emerald-600">✓</span>
-                      ) : dirty ? (
-                        <span className="text-amber-500">●</span>
-                      ) : r.today ? (
-                        <span className="text-navy-400">✓</span>
-                      ) : (
-                        <span className="text-slate-300">—</span>
-                      )}
+                      {saved ? <span className="text-emerald-600">✓</span> : dirty ? <span className="text-amber-500">●</span> : fr.today ? <span className="text-navy-400">✓</span> : <span className="text-slate-300">—</span>}
                     </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
+          <datalist id="phase-suggestions">
+            {["Survey / Design", "Land Acquisition", "Utilities Shifting", "Mobilization", "Earthwork / Excavation", "Piling / Foundation", "Structure / RCC", "Deck / Superstructure", "Backfilling", "Road Works / Carpeting", "Electrical / Mechanical", "Finishing", "Landscaping / Beautification", "Testing & Commissioning", "Defect Liability"].map((p) => (
+              <option key={p} value={p} />
+            ))}
+          </datalist>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 bg-slate-50 px-4 py-2.5 text-[11px] text-slate-500">
           <div>
-            <span className="mr-4">● unsaved change</span>
+            <span className="mr-4">● unsaved</span>
             <span className="mr-4 text-emerald-600">✓ saved</span>
-            <span>Blank cells keep previous values untouched — enter cumulative figures.</span>
+            <span>% Complete is cumulative from start · Δ Today is computed automatically vs your last report · Financial % is computed from Spent ÷ Allocation.</span>
           </div>
           <div>
-            {rows.length} row{rows.length === 1 ? "" : "s"} · {dirtyKeys.length} unsaved
+            {rows.length} rows · {dirtyKeys.length} unsaved
           </div>
         </div>
       </div>
+
+      {/* Add work item modal */}
+      {addFor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-950/50 p-4">
+          <div className="card w-full max-w-md p-6">
+            <h3 className="text-[15px] font-bold text-navy-900">Add work item</h3>
+            <p className="mt-1 text-[12px] text-slate-500">
+              Under: <span className="font-medium text-slate-700">{addFor.schemeName}</span> — e.g. “Dalazak Road Underpass”. It becomes its own daily-tracked row; the scheme&apos;s % rolls up from its work items.
+            </p>
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="label">Work item name *</label>
+                <input className="input" value={newSub.name} onChange={(e) => setNewSub({ ...newSub, name: e.target.value })} placeholder="e.g. Dalazak Road Underpass" autoFocus />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Weight / cost share (M) — optional</label>
+                  <input className="input" type="number" min={0} value={newSub.weight} onChange={(e) => setNewSub({ ...newSub, weight: e.target.value })} placeholder="equal if blank" />
+                </div>
+                <div>
+                  <label className="label">Target date — optional</label>
+                  <input className="input" type="date" value={newSub.targetDate} onChange={(e) => setNewSub({ ...newSub, targetDate: e.target.value })} />
+                </div>
+              </div>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button className="btn-ghost" onClick={() => setAddFor(null)}>
+                Cancel
+              </button>
+              <button className="btn-primary" onClick={createSub} disabled={!newSub.name.trim()}>
+                Add work item
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

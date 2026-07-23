@@ -32,4 +32,15 @@ export class AdminController {
     await this.prisma.user.update({ where: { id }, data: { passwordHash } });
     return { ok: true };
   }
+
+  /** Set / clear a department's focal-person email (used for onboarding + reminders). */
+  @Post("departments/:id/email")
+  async setDepartmentEmail(@Param("id") id: string, @Body() body: { email?: string }) {
+    const email = (body.email || "").trim().toLowerCase();
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new BadRequestException("Invalid email address");
+    }
+    await this.prisma.department.update({ where: { id }, data: { email: email || null } });
+    return { ok: true, email: email || null };
+  }
 }

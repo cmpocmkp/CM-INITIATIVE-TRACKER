@@ -39,10 +39,14 @@ export const api = {
   get: <T>(path: string) => request<T>(path),
   post: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "POST", body: body != null ? JSON.stringify(body) : undefined }),
+  patch: <T>(path: string, body?: unknown) =>
+    request<T>(path, { method: "PATCH", body: body != null ? JSON.stringify(body) : undefined }),
+  del: <T>(path: string) => request<T>(path, { method: "DELETE" }),
 };
 
 // ── Shared types (mirror backend responses) ───────────────────
 export type Role = "SUPERADMIN" | "ADMIN" | "DEPARTMENT";
+// Scheme lifecycle (set rarely, on the scheme itself)
 export type Stage =
   | "NOT_STARTED"
   | "FEASIBILITY"
@@ -51,6 +55,8 @@ export type Stage =
   | "EXECUTION"
   | "COMPLETED"
   | "ON_HOLD";
+// Daily on-ground site status
+export type SiteStatus = "NOT_STARTED" | "ACTIVE" | "SLOW" | "HALTED" | "COMPLETED";
 
 export interface SessionUser {
   userId: string;
@@ -64,13 +70,16 @@ export interface SessionUser {
 export interface Update {
   id: string;
   reportDate: string;
+  phase: string | null;
+  physicalProgressPct: number | null;
+  narrative: string | null;
+  manpower: number | null;
+  machinery: number | null;
+  siteStatus: SiteStatus;
+  bottlenecks: string | null;
   fundsReleased: number | null;
   expenditure: number | null;
   financialProgressPct: number | null;
-  physicalProgressPct: number | null;
-  stage: Stage;
-  narrative: string | null;
-  bottlenecks: string | null;
   createdAt: string;
   submittedBy?: { name: string; username: string } | null;
 }
@@ -79,6 +88,16 @@ export interface DeptRef {
   id: string;
   name: string;
   code: string;
+}
+
+export interface SubProject {
+  id: string;
+  schemeId: string;
+  name: string;
+  description: string | null;
+  weight: number | null;
+  targetDate: string | null;
+  updates: Update[];
 }
 
 export interface Scheme {
@@ -91,9 +110,12 @@ export interface Scheme {
   adpAllocation: number | null;
   isPRP: boolean;
   isPlaceholder: boolean;
+  stage: Stage;
   department: DeptRef;
   initiative: { id: string; number: number; shortName: string; name?: string } | null;
   updates: Update[];
+  subProjects?: SubProject[];
+  effectivePhysical?: number | null;
 }
 
 export interface Initiative {
@@ -126,6 +148,7 @@ export interface Dashboard {
   department: { id: string | null; name: string | null } | null;
   totals: Totals;
   stageDist: Record<string, number>;
+  attention: { schemeId: string; name: string; dept: string; status: SiteStatus; note: string | null }[];
   sectors: { sector: string; count: number; cost: number; alloc: number; spent: number; avgPhysical: number; updatedToday: number }[];
   initiatives: {
     id: string;
@@ -141,23 +164,33 @@ export interface Dashboard {
     avgPhysical: number;
     updatedToday: number;
   }[];
-  compliance: { id: string; name: string; code: string; schemes: number; updatedToday: number; reported: number }[];
+  compliance: { id: string; name: string; code: string; email: string | null; schemes: number; updatedToday: number; reported: number }[];
   today: string;
+}
+
+export interface SheetSubRow {
+  entityType: "SUBPROJECT";
+  entityId: string;
+  name: string;
+  weight: number | null;
+  targetDate: string | null;
+  today: Update | null;
+  prev: Update | null;
 }
 
 export interface SheetRow {
   entityType: "SCHEME" | "INITIATIVE";
   entityId: string;
   name: string;
+  label: string;
   adpCode: string | null;
-  sector: string;
-  department: DeptRef | null;
-  totalCost: number | null;
-  adpAllocation: number | null;
+  allocation: number | null;
   isPRP: boolean;
+  hasSubs: boolean;
   initiative?: { id: string; number: number; shortName: string } | null;
   today: Update | null;
-  latest: Update | null;
+  prev: Update | null;
+  subRows: SheetSubRow[];
 }
 
 // ── Formatters ────────────────────────────────────────────────
@@ -182,3 +215,21 @@ export const STAGES: { value: Stage; label: string }[] = [
 ];
 export const stageLabel = (s?: Stage | null): string =>
   STAGES.find((x) => x.value === s)?.label ?? "Not Started";
+
+export const SITE_STATUSES: { value: SiteStatus; label: string }[] = [
+  { value: "NOT_STARTED", label: "Not Started" },
+  { value: "ACTIVE", label: "Active" },
+  { value: "SLOW", label: "Slow" },
+  { value: "HALTED", label: "Halted" },
+  { value: "COMPLETED", label: "Completed" },
+];
+export const siteLabel = (s?: SiteStatus | null): string =>
+  SITE_STATUSES.find((x) => x.value === s)?.label ?? "Not Started";
+
+/** Signed daily change, e.g. +2.0% */
+export const fmtDelta = (curr?: number | null, prev?: number | null): string | null => {
+  if (curr == null || prev == null) return null;
+  const d = curr - prev;
+  const s = `${d >= 0 ? "+" : ""}${d.toFixed(1)}%`;
+  return s;
+};
