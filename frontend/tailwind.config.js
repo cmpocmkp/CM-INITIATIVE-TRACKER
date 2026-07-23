@@ -4,18 +4,19 @@ export default {
   theme: {
     extend: {
       colors: {
+        // CMPO brand blue — anchored on the logo cyan (#00AEEF)
         navy: {
-          50: "#eef3fa",
-          100: "#dbe6f3",
-          200: "#b9cde7",
-          300: "#8caed6",
-          400: "#5d8ac2",
-          500: "#2f66a8",
-          600: "#1f4e8a",
-          700: "#173d6e",
-          800: "#102c52",
-          900: "#0b1f3a",
-          950: "#071527",
+          50: "#eef9fe",
+          100: "#d8f1fc",
+          200: "#b0e4f9",
+          300: "#7dd3f4",
+          400: "#38bdf0",
+          500: "#00aeef",
+          600: "#0092cd",
+          700: "#0076a9",
+          800: "#0a5f86",
+          900: "#0d4a68",
+          950: "#082f43",
         },
       },
       boxShadow: {

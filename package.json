@@ -1,8 +1,8 @@
 {
-  "name": "cm-initiative-sector",
+  "name": "cm-initiative-tracker",
   "version": "1.0.0",
   "private": true,
-  "description": "CM INITIATIVE SECTOR — KP CM Priority Initiatives & Sector Tracking Platform (NestJS + React monolith)",
+  "description": "CM INITIATIVE TRACKER — KP CM Priority Initiatives & Sector Tracking Platform (NestJS + React monolith)",
   "workspaces": [
     "backend",
     "frontend"

@@ -55,7 +55,7 @@ export default function Layout() {
       <div className="flex items-center gap-3 border-b border-white/10 px-5 py-4">
         <Logo size={40} className="rounded-lg" />
         <div className="leading-tight">
-          <div className="text-[13px] font-bold text-white">CM INITIATIVE SECTOR</div>
+          <div className="text-[13px] font-bold text-white">CM INITIATIVE TRACKER</div>
           <div className="text-[11px] text-white/50">Government of Khyber Pakhtunkhwa</div>
         </div>
       </div>
@@ -137,7 +137,7 @@ export default function Layout() {
           <Outlet />
         </main>
         <footer className="px-6 pb-8 pt-2 text-center text-[11px] text-slate-400">
-          CM Initiative Sector · Data collection &amp; visualization platform · Government of Khyber Pakhtunkhwa
+          CM Initiative Tracker · Data collection &amp; visualization platform · Government of Khyber Pakhtunkhwa
         </footer>
       </div>
     </div>

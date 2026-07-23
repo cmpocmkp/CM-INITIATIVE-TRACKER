@@ -1,4 +1,4 @@
-# CM INITIATIVE SECTOR
+# CM INITIATIVE TRACKER
 
 **Khyber Pakhtunkhwa — Chief Minister's Priority Initiatives & Sector Tracking Platform**
 Data collection + visualization for the CM's **21 focus initiatives** and **86 ADP priority schemes**, reported **daily** by **34 departments**.

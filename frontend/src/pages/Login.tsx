@@ -39,7 +39,7 @@ export default function Login() {
           <div className="mx-auto mb-4 w-fit shadow-lg">
             <Logo size={72} className="rounded-2xl" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">CM INITIATIVE SECTOR</h1>
+          <h1 className="text-2xl font-bold tracking-tight">CM INITIATIVE TRACKER</h1>
           <p className="mt-1.5 text-[13px] text-white/60">
             Chief Minister&apos;s Priority Initiatives &amp; Sector Tracking · Khyber Pakhtunkhwa
           </p>

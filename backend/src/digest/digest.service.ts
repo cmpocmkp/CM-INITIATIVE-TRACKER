@@ -72,20 +72,20 @@ export class DigestService {
 
     for (const dept of laggards) {
       await transport.sendMail({
-        from: `CM Initiative Sector <${process.env.GMAIL_USER}>`,
+        from: `CM Initiative Tracker <${process.env.GMAIL_USER}>`,
         to: dept.email as string,
         subject: `Reminder: Daily progress entry pending — ${dept.code} · ${d.today}`,
         html: `
 <div style="font-family:Segoe UI,Arial,sans-serif;max-width:560px;margin:0 auto;border:1px solid #e5eaf0;border-radius:12px;overflow:hidden;">
-  <div style="background:#0b1f3a;color:#fff;padding:16px 22px;">
-    <b>CM Initiative Sector</b><span style="opacity:.7"> · Government of Khyber Pakhtunkhwa</span>
+  <div style="background:#0076a9;color:#fff;padding:16px 22px;">
+    <b>CM Initiative Tracker</b><span style="opacity:.7"> · Government of Khyber Pakhtunkhwa</span>
   </div>
   <div style="padding:20px 22px;font-size:14px;color:#1e293b;line-height:1.6;">
     <p>Dear <b>${dept.name}</b>,</p>
     <p>Today's progress entry for your <b>${dept.schemes} priority scheme(s)</b> has not been submitted yet.
     Please fill your daily sheet — it takes a few minutes.</p>
     <p style="text-align:center;margin:22px 0;">
-      <a href="${appUrl}/entry" style="background:#0b1f3a;color:#fff;text-decoration:none;padding:11px 26px;border-radius:8px;font-weight:600;">Fill Today's Sheet</a>
+      <a href="${appUrl}/entry" style="background:#0076a9;color:#fff;text-decoration:none;padding:11px 26px;border-radius:8px;font-weight:600;">Fill Today's Sheet</a>
     </p>
     <p style="font-size:12px;color:#64748b;">Sign in with your department code <b>${dept.code}</b>. This reminder is sent each morning until the day's entry is received.</p>
   </div>
@@ -118,13 +118,13 @@ export class DigestService {
         continue;
       }
       await transport.sendMail({
-        from: `CM Initiative Sector <${process.env.GMAIL_USER}>`,
+        from: `CM Initiative Tracker <${process.env.GMAIL_USER}>`,
         to: dept.email,
-        subject: `Your login — CM Initiative Sector (${dept.code})`,
+        subject: `Your login — CM Initiative Tracker (${dept.code})`,
         html: `
 <div style="font-family:Segoe UI,Arial,sans-serif;max-width:560px;margin:0 auto;border:1px solid #e5eaf0;border-radius:12px;overflow:hidden;">
-  <div style="background:#0b1f3a;color:#fff;padding:16px 22px;">
-    <b>CM Initiative Sector</b><span style="opacity:.7"> · Government of Khyber Pakhtunkhwa</span>
+  <div style="background:#0076a9;color:#fff;padding:16px 22px;">
+    <b>CM Initiative Tracker</b><span style="opacity:.7"> · Government of Khyber Pakhtunkhwa</span>
   </div>
   <div style="padding:20px 22px;font-size:14px;color:#1e293b;line-height:1.6;">
     <p>Dear <b>${dept.name}</b>,</p>
@@ -157,9 +157,9 @@ export class DigestService {
     const html = await this.buildHtml();
     const today = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Karachi" });
     await transport.sendMail({
-      from: `CM Initiative Sector <${process.env.GMAIL_USER}>`,
+      from: `CM Initiative Tracker <${process.env.GMAIL_USER}>`,
       to: to.join(","),
-      subject: `CM Initiative Sector — Daily Progress Digest · ${today}`,
+      subject: `CM Initiative Tracker — Daily Progress Digest · ${today}`,
       html,
     });
     return { ok: true, recipients: to };
@@ -171,7 +171,7 @@ export class DigestService {
       Math.abs(n) >= 1000 ? `Rs ${(n / 1000).toFixed(1)} Bn` : `Rs ${n.toFixed(0)} M`;
     const pct = (n: number) => `${Math.round(n)}%`;
 
-    const navy = "#0b1f3a";
+    const navy = "#0076a9";
     const initRows = d.initiatives
       .map(
         (i: any) => `
@@ -199,7 +199,7 @@ export class DigestService {
 <div style="font-family:Segoe UI,Arial,sans-serif;background:#f4f6f9;padding:24px;">
   <div style="max-width:720px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5eaf0;">
     <div style="background:${navy};padding:20px 24px;color:#fff;">
-      <div style="font-size:18px;font-weight:700;">CM Initiative Sector — Daily Digest</div>
+      <div style="font-size:18px;font-weight:700;">CM Initiative Tracker — Daily Digest</div>
       <div style="font-size:12px;opacity:.75;margin-top:2px;">Khyber Pakhtunkhwa · Chief Minister's Priority Initiatives &amp; Sectors · ${d.today}</div>
     </div>
     <div style="padding:20px 24px;">

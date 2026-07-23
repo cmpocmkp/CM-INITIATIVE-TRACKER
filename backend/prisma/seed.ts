@@ -1,5 +1,5 @@
 /**
- * CM INITIATIVE SECTOR — database seed.
+ * CM INITIATIVE TRACKER — database seed.
  *
  * Idempotent / create-if-missing so it is safe to run on every deploy.
  * Set FORCE_RESEED=1 to also refresh owner/initiative/cost on existing schemes.
@@ -118,7 +118,7 @@ async function ensureUser(username: string, password: string, name: string, role
 }
 
 async function main() {
-  console.log("Seeding CM INITIATIVE SECTOR ...");
+  console.log("Seeding CM INITIATIVE TRACKER ...");
 
   // 1) Departments (upsert by key)
   const deptByKey: Record<string, string> = {};

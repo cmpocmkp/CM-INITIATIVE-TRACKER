@@ -34,7 +34,7 @@ async function bootstrap() {
 
   const port = Number(process.env.PORT || 4000);
   await app.listen(port, "0.0.0.0");
-  console.log(`CM INITIATIVE SECTOR backend running on :${port} (frontend: ${dist ?? "dev proxy"})`);
+  console.log(`CM INITIATIVE TRACKER backend running on :${port} (frontend: ${dist ?? "dev proxy"})`);
 }
 
 bootstrap();

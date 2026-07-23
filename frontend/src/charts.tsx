@@ -15,8 +15,8 @@ import {
 } from "recharts";
 import { stageLabel, Stage } from "./api";
 
-// Duotone navy palette for all charts.
-export const NAVY = ["#0b1f3a", "#173d6e", "#2f66a8", "#5d8ac2", "#8caed6", "#b9cde7", "#dbe6f3"];
+// CMPO blue palette for all charts.
+export const NAVY = ["#0d4a68", "#0076a9", "#0092cd", "#00aeef", "#7dd3f4", "#b0e4f9", "#d8f1fc"];
 
 const tooltipStyle = {
   borderRadius: 8,
@@ -54,8 +54,8 @@ export function SectorBars({
           wrapperStyle={{ fontSize: 12 }}
           formatter={(v) => (v === "alloc" ? "ADP Allocation" : "Expenditure")}
         />
-        <Bar dataKey="alloc" fill="#173d6e" radius={[3, 3, 0, 0]} />
-        <Bar dataKey="spent" fill="#8caed6" radius={[3, 3, 0, 0]} />
+        <Bar dataKey="alloc" fill="#0076a9" radius={[3, 3, 0, 0]} />
+        <Bar dataKey="spent" fill="#7dd3f4" radius={[3, 3, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );
@@ -96,8 +96,8 @@ export function TrendLine({
         <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: "#475569" }} tickFormatter={(v) => `${v}%`} />
         <Tooltip contentStyle={tooltipStyle} formatter={(v: number, n: string) => [`${Math.round(v)}%`, n === "physical" ? "Physical" : "Financial"]} />
         <Legend wrapperStyle={{ fontSize: 12 }} formatter={(v) => (v === "physical" ? "Physical %" : "Financial %")} />
-        <Line type="monotone" dataKey="physical" stroke="#0b1f3a" strokeWidth={2.5} dot={{ r: 2 }} connectNulls />
-        <Line type="monotone" dataKey="financial" stroke="#5d8ac2" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+        <Line type="monotone" dataKey="physical" stroke="#0076a9" strokeWidth={2.5} dot={{ r: 2 }} connectNulls />
+        <Line type="monotone" dataKey="financial" stroke="#38bdf0" strokeWidth={2} dot={{ r: 2 }} connectNulls />
       </LineChart>
     </ResponsiveContainer>
   );
