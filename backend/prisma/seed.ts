@@ -186,6 +186,9 @@ async function main() {
   let skippedNoDept = 0;
 
   for (const row of schemes) {
+    // Rows without an ADP code are the initiatives themselves written as line
+    // items (e.g. "Cashless Economy") — tracked as Initiatives, not schemes.
+    if (row.isPlaceholder) continue;
     const ownerKey = row.isPRP ? "LG" : row.sector;
     const departmentId = deptByKey[ownerKey] ?? deptByKey[row.sector];
     if (!departmentId) {
