@@ -103,11 +103,10 @@ export default function Reports() {
     <div className="space-y-6">
       <Heading
         title="Reports"
-        subtitle="Weekly collection — the digest email goes out automatically every Monday at 6:00 PM (PKT); you can also send or preview it now."
         action={
           <div className="flex flex-wrap gap-2">
             <button className="btn-ghost" onClick={loadPreview}>
-              👁 Preview
+              Preview
             </button>
             <button
               className="btn-ghost"
@@ -122,13 +121,13 @@ export default function Reports() {
               }}
               title="Pull Category, budget, releases and expenditure from the P&D PCFMS portal"
             >
-              ⇅ Sync P&D Data
+              Sync P&D Data
             </button>
             <button className="btn-ghost" onClick={remindNow} disabled={sending} title="Email departments that haven't filled this week's sheet">
-              🔔 Remind Pending Depts
+              Remind Pending Depts
             </button>
             <button className="btn-primary" onClick={sendNow} disabled={sending}>
-              {sending ? "Sending…" : "✉ Send Digest Now"}
+              {sending ? "Sending…" : "Send Digest Now"}
             </button>
           </div>
         }
@@ -328,10 +327,10 @@ export default function Reports() {
         <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-navy-900">Exports</h2>
         <div className="flex flex-wrap gap-3">
           <a href="/api/export/schemes.csv" download className="btn-ghost">
-            ⬇ All schemes with latest progress (CSV)
+            All schemes with latest progress (CSV)
           </a>
           <a href="/api/reports/schemes.pdf" download className="btn-ghost">
-            ⬇ Official schemes — one-page card sheet (PDF)
+            Official schemes — one-page card sheet (PDF)
           </a>
         </div>
       </div>

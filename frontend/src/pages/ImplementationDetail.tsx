@@ -16,7 +16,10 @@ export default function ImplementationDetail() {
   if (!list || !name) return <Spinner label="Loading…" />;
 
   const agency = decodeURIComponent(name);
-  const schemes = list.filter((s) => (s.implementingAgency ?? "").trim() === agency);
+  const schemes = list.filter((s) => {
+    const a = (s.implementingAgency ?? "").trim();
+    return a ? a === agency : s.department?.name === agency;
+  });
 
   return (
     <div className="space-y-5">

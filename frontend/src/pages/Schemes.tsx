@@ -54,7 +54,7 @@ export default function Schemes() {
         subtitle={`${filtered.length} shown · ${list.filter((x) => x.isOfficial).length} official schemes · ${list.length - list.filter((x) => x.isOfficial).length} initiative work items`}
         action={
           <a href="/api/export/schemes.csv" className="btn-ghost" download>
-            ⬇ Export CSV
+            Export CSV
           </a>
         }
       />

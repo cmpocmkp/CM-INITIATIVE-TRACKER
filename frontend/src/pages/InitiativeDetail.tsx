@@ -51,7 +51,7 @@ export default function InitiativeDetail() {
               <h1 className="text-xl font-bold text-navy-900">{i.name}</h1>
             </div>
             <a href={`/api/reports/initiative/${i.id}.pdf`} download className="btn-ghost shrink-0 px-3 py-1.5 text-xs">
-              ⬇ One-Pager (PDF)
+              One-Pager (PDF)
             </a>
           </div>
           <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">

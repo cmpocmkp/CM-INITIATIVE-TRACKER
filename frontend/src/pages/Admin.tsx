@@ -144,10 +144,10 @@ export default function Admin() {
         action={
           <div className="flex flex-wrap gap-2">
             <a href="/api/admin/users/credentials.csv" download className="btn-ghost">
-              ⬇ Logins sheet (Excel)
+              Logins sheet (Excel)
             </a>
             <button className="btn-primary" onClick={() => sendOnboarding()} disabled={busy}>
-              {busy ? "Sending…" : "✉ Send credentials to all (with email)"}
+              {busy ? "Sending…" : "Send credentials to all (with email)"}
             </button>
           </div>
         }
@@ -243,7 +243,7 @@ export default function Admin() {
                       onClick={() => sendOnboarding([d.id])}
                       title="Send username + password to this department (email + WhatsApp)"
                     >
-                      ✉ Credentials
+                      Credentials
                     </button>
                   </td>
                 </tr>
@@ -258,7 +258,7 @@ export default function Admin() {
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-bold uppercase tracking-wide text-navy-900">User accounts</h2>
             <button className="btn-ghost px-3 py-1 text-xs" onClick={() => setShowPwd((v) => !v)}>
-              {showPwd ? "🙈 Hide passwords" : "👁 Show passwords"}
+              {showPwd ? "🙈 Hide passwords" : "Show passwords"}
             </button>
           </div>
         </div>

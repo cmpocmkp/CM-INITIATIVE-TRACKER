@@ -258,7 +258,7 @@ export default function Entry() {
       }
       setAttempted(false);
       setNotice(`✓ Day submitted — ${res.saved} entr${res.saved === 1 ? "y" : "ies"} recorded for ${fmtDate(date)}. The sheet is now locked; corrections go through the CM Office.`);
-      await load(); // reload → rows come back locked 🔒
+      await load(); // reload → rows come back locked 
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -373,7 +373,7 @@ export default function Entry() {
       )}
       {editableRows.length === 0 && rows.some((r) => r.dayLocked) && (
         <div className="rounded-lg border border-white/10 bg-white/[0.04] px-4 py-2.5 text-[13px] text-white/75">
-          🔒 This week&apos;s sheet is submitted and locked. To fix a mistake use{" "}
+          This week&apos;s sheet is submitted and locked. To fix a mistake use{" "}
           <span className="font-medium">request correction</span> on the row — the CM Office approves or rejects it.
         </div>
       )}
@@ -457,11 +457,11 @@ export default function Entry() {
                           {schemeWithSubs && <span>rolls up</span>}
                           {frozen && fr.correction !== "PENDING" && (
                             <button className="font-medium text-white/75 hover:underline" onClick={() => { setCorrFor(fr); setCorrReason(""); }}>
-                              🔒 request correction
+                              request correction
                             </button>
                           )}
                           {fr.correction === "PENDING" && <span className="text-white/50">correction pending with CM Office…</span>}
-                          {fr.correction === "APPROVED" && !frozen && <span className="text-white/85">✎ correction approved — edit &amp; save (one time)</span>}
+                          {fr.correction === "APPROVED" && !frozen && <span className="text-white/85">correction approved — edit &amp; save (one time)</span>}
                           {fr.entityType === "SCHEME" && !frozen && (
                             <button
                               className="font-semibold text-navy-500 opacity-0 transition-opacity hover:underline group-hover/row:opacity-100"
@@ -538,7 +538,7 @@ export default function Entry() {
                       {fr.computed ? (
                         <span className="text-[9px] font-bold text-white/30">AUTO</span>
                       ) : frozen ? (
-                        <span title="Submitted — locked for today. Use 'request correction' to edit.">🔒</span>
+                        <span title="Submitted — locked for today. Use 'request correction' to edit."></span>
                       ) : rowDone ? (
                         <span className="font-bold text-white/95" title="Row complete — ready to submit">✓</span>
                       ) : (

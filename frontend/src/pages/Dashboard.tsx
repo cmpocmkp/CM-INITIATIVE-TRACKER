@@ -35,7 +35,7 @@ export default function Dashboard() {
         action={
           !staff && (
             <Link to="/entry" className="btn-primary">
-              ✎ Enter Today&apos;s Progress
+              Enter Today&apos;s Progress
             </Link>
           )
         }

@@ -51,7 +51,7 @@ function HistoryTable({ updates, showMoney }: { updates: Update[]; showMoney: bo
                 <td className="td max-w-[220px] text-[12px]">
                   {x.bottlenecks ? (
                     <span className="text-white/95">
-                      <b>⚠</b> {x.bottlenecks}
+                      <b></b> {x.bottlenecks}
                     </span>
                   ) : (
                     <span className="text-white/30">—</span>
@@ -179,7 +179,7 @@ export default function SchemeDetail() {
             <div className="text-right">
               {superadmin && (
                 <button className="btn-ghost mb-2 px-3 py-1 text-[11px]" onClick={openEditor}>
-                  ✎ Edit Scheme
+                  Edit Scheme
                 </button>
               )}
               <div className="text-[10px] uppercase tracking-wider text-white/40">Lifecycle (PC-1 etc.)</div>
