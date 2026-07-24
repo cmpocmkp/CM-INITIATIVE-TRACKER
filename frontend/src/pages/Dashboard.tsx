@@ -31,11 +31,7 @@ export default function Dashboard() {
     <div className="space-y-6">
       <Heading
         title={staff ? "Overview" : `${d.department?.name ?? "Department"} — Overview`}
-        subtitle={
-          staff
-            ? `CM's priority portfolio · live position as of ${d.today}`
-            : `Your schemes & progress · ${d.today}`
-        }
+        subtitle={staff ? undefined : `Your schemes & progress · ${d.today}`}
         action={
           !staff && (
             <Link to="/entry" className="btn-primary">
