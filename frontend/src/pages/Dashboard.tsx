@@ -55,12 +55,8 @@ export default function Dashboard() {
         <Kpi label="Portfolio Cost" value={fmtM(d.totals.totalCost)} />
         <Kpi label="ADP Allocation" value={fmtM(d.totals.totalAlloc)} />
         <Kpi label="Expenditure" value={fmtM(d.totals.totalSpent)} sub={`${fmtM(d.totals.totalReleased)} released`} />
-        <Kpi label="Physical Progress" value={fmtPct(d.totals.avgPhysical)} sub="cost-weighted" />
-        <Kpi
-          label="Updated This Week"
-          value={`${d.totals.updatedToday}/${d.totals.count}`}
-          sub={`${d.totals.reported} ever reported`}
-        />
+        <Kpi label="Physical Progress" value={fmtPct(d.totals.avgPhysical)} />
+        <Kpi label="Updated This Week" value={`${d.totals.updatedToday}/${d.totals.count}`} />
       </div>
 
       {/* Daily Progress — minimalist initiative list */}
