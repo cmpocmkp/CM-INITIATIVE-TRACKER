@@ -118,11 +118,11 @@ export default function SchemeDetail() {
         isOfficial: form.isOfficial,
         isPRP: form.isPRP,
       });
-      setMsg("\u2713 Scheme updated");
+      setMsg("✓ Scheme updated");
       setEditOpen(false);
       load();
     } catch (e) {
-      setMsg(`\u2717 ${(e as Error).message}`);
+      setMsg(`✗ ${(e as Error).message}`);
     } finally {
       setSavingEdit(false);
     }
@@ -179,7 +179,7 @@ export default function SchemeDetail() {
             <div className="text-right">
               {superadmin && (
                 <button className="btn-ghost mb-2 px-3 py-1 text-[11px]" onClick={openEditor}>
-                  \u270e Edit Scheme
+                  ✎ Edit Scheme
                 </button>
               )}
               <div className="text-[10px] uppercase tracking-wider text-white/40">Lifecycle (PC-1 etc.)</div>
@@ -398,7 +398,7 @@ export default function SchemeDetail() {
               <div>
                 <label className="label">Initiative</label>
                 <select className="input" value={String(form.initiativeId ?? "")} onChange={(e) => setForm({ ...form, initiativeId: e.target.value })}>
-                  <option value="">\u2014 none \u2014</option>
+                  <option value="">— none —</option>
                   {inits.map((i) => (
                     <option key={i.id} value={i.id}>#{i.number} {i.shortName}</option>
                   ))}
@@ -406,7 +406,7 @@ export default function SchemeDetail() {
               </div>
               <div>
                 <label className="label">Implementation (executing agency)</label>
-                <input className="input" placeholder="PDA, WSSP, CMGP\u2026" value={String(form.implementingAgency ?? "")} onChange={(e) => setForm({ ...form, implementingAgency: e.target.value })} />
+                <input className="input" placeholder="PDA, WSSP, CMGP…" value={String(form.implementingAgency ?? "")} onChange={(e) => setForm({ ...form, implementingAgency: e.target.value })} />
               </div>
               <div>
                 <label className="label">Total cost (Rs M)</label>
@@ -430,7 +430,7 @@ export default function SchemeDetail() {
             <div className="mt-5 flex justify-end gap-2">
               <button className="btn-ghost" onClick={() => setEditOpen(false)}>Cancel</button>
               <button className="btn-primary" onClick={saveEdit} disabled={savingEdit}>
-                {savingEdit ? "Saving\u2026" : "Save Changes"}
+                {savingEdit ? "Saving…" : "Save Changes"}
               </button>
             </div>
           </div>

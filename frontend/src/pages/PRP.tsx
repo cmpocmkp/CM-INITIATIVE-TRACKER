@@ -21,10 +21,7 @@ export default function PRP() {
 
   return (
     <div className="space-y-6">
-      <Heading
-        title="Peshawar Revitalization Plan"
-        subtitle={`Initiative #1 · ${prp.length} schemes · the implementing agency is responsible for delivery`}
-      />
+      <Heading title="Peshawar Revitalization Plan" />
 
       {/* KPI row — 4 cards as on Overview */}
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
@@ -36,13 +33,14 @@ export default function PRP() {
 
       <div className="card overflow-hidden">
         <div className="scroll-thin overflow-x-auto">
-          <table className="w-full" style={{ minWidth: 1000 }}>
+          <table className="w-full" style={{ minWidth: 1240 }}>
             <thead>
               <tr className="border-b border-white/10">
+                <th className="th">Code</th>
                 <th className="th">Scheme</th>
+                <th className="th">Sector</th>
                 <th className="th">Department</th>
                 <th className="th">Implementation</th>
-                <th className="th">Cat</th>
                 <th className="th !text-right">Cost (M)</th>
                 <th className="th !text-right">Alloc (M)</th>
                 <th className="th !text-right">Spent (M)</th>
@@ -57,15 +55,16 @@ export default function PRP() {
                 const phys = s.effectivePhysical ?? u?.physicalProgressPct ?? null;
                 return (
                   <tr key={s.id} className="border-b border-white/[0.07] align-top hover:bg-white/[0.06]">
+                    <td className="td whitespace-nowrap text-[12px] tabular-nums text-white/50">{s.adpCode ?? "—"}</td>
                     <td className="td max-w-[420px]">
                       <Link to={`/schemes/${s.id}`} className="text-white/90 hover:text-white hover:underline">
-                        {s.adpCode && <span className="mr-1.5 text-[11px] text-white/40">{s.adpCode}</span>}
                         {cleanName(s.name)}
                       </Link>
                       {(s.subProjects?.length ?? 0) > 0 && (
                         <span className="ml-1.5 text-[10px] text-white/40">{s.subProjects!.length} work items</span>
                       )}
                     </td>
+                    <td className="td whitespace-nowrap text-[12px]">{s.sector}</td>
                     <td className="td whitespace-nowrap text-[12px]" title={s.department?.name}>
                       {deptShort(s.department)}
                     </td>
@@ -74,15 +73,6 @@ export default function PRP() {
                         <span className="rounded-md border border-white/20 bg-white/[0.06] px-1.5 py-0.5 text-[11px] text-white/80">
                           {s.implementingAgency}
                         </span>
-                      ) : (
-                        <span className="text-white/30">—</span>
-                      )}
-                    </td>
-                    <td className="td whitespace-nowrap">
-                      {s.pcfmsCategory === "A" ? (
-                        <span className="rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-medium text-black">A</span>
-                      ) : s.pcfmsCategory ? (
-                        <span className="rounded border border-white/25 px-1.5 py-0.5 text-[10px] text-white/70">{s.pcfmsCategory}</span>
                       ) : (
                         <span className="text-white/30">—</span>
                       )}
