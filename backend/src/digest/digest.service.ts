@@ -51,6 +51,60 @@ export class DigestService {
     }
   }
 
+  /** 6:05 PM PKT — WhatsApp daily progress report to the leadership list. */
+  @Cron("5 18 * * *", { timeZone: "Asia/Karachi" })
+  async scheduledWhatsappReport() {
+    try {
+      const res = await this.sendWhatsappReport();
+      this.logger.log(`WhatsApp report: ${JSON.stringify(res)}`);
+    } catch (e) {
+      this.logger.error(`WhatsApp report failed: ${(e as Error).message}`);
+    }
+  }
+
+  /**
+   * Daily 1-page initiative progress report over WhatsApp (template
+   * TWILIO_CONTENT_REPORT_SID) to WHATSAPP_REPORT_RECIPIENTS (comma list).
+   */
+  async sendWhatsappReport(): Promise<{ ok: boolean; reason?: string; sent: string[]; failed: string[] }> {
+    const template = process.env.TWILIO_CONTENT_REPORT_SID;
+    const recipients = (process.env.WHATSAPP_REPORT_RECIPIENTS || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (!this.whatsapp.configured) return { ok: false, reason: "WhatsApp not configured", sent: [], failed: [] };
+    if (!recipients.length) return { ok: false, reason: "WHATSAPP_REPORT_RECIPIENTS not set", sent: [], failed: [] };
+
+    const d = await this.core.dashboard(SYSTEM_USER);
+    const attention = d.attention?.length
+      ? `${d.attention.length} site(s) halted/slow — ${d.attention
+          .slice(0, 2)
+          .map((a: any) => a.dept)
+          .join(", ")}`
+      : "none";
+    const appUrl = process.env.APP_URL || "";
+    const sent: string[] = [];
+    const failed: string[] = [];
+
+    for (const to of recipients) {
+      const r = template
+        ? await this.whatsapp.sendTemplate(to, template, {
+            "1": d.today,
+            "2": String(d.totals.count),
+            "3": d.totals.avgPhysical.toFixed(1),
+            "4": `${d.totals.updatedToday}/${d.totals.count}`,
+            "5": attention,
+            "6": appUrl,
+          })
+        : await this.whatsapp.send(
+            to,
+            `*CM Initiative Tracker — Daily Progress ${d.today}*\nSchemes: ${d.totals.count} | Physical: ${d.totals.avgPhysical.toFixed(1)}% | Updated today: ${d.totals.updatedToday}/${d.totals.count}\nAttention: ${attention}\nDashboard: ${appUrl}\n— CMPO`,
+          );
+      (r.ok ? sent : failed).push(to);
+    }
+    return { ok: failed.length === 0, sent, failed };
+  }
+
   /**
    * Escalating reminders (PKT): 9 AM → 1 PM → 4 PM → 5 PM (final).
    * Each round only reaches departments whose sheet is still pending,
@@ -104,17 +158,26 @@ export class DigestService {
     const sent: string[] = [];
     const waSent: string[] = [];
 
-    // WhatsApp reminders (departments with a phone set)
+    // WhatsApp reminders (departments with a phone set). Template first
+    // (deliverable to cold contacts once approved); freeform fallback.
     if (this.whatsapp.configured) {
+      const reminderTemplate = process.env.TWILIO_CONTENT_REMINDER_SID;
       const phones = await this.prisma.department.findMany({
         where: { id: { in: pending.map((c: any) => c.id) }, phone: { not: null } },
         select: { code: true, name: true, phone: true, _count: { select: { schemes: true } } },
       });
       for (const p of phones) {
-        const r = await this.whatsapp.send(
-          p.phone as string,
-          `*CM Initiative Tracker — ${label}*\n\nDear ${p.name},\n\nToday's progress entry for your ${p._count.schemes} priority scheme(s) is still pending.${finalLine}\n\nFill your daily sheet:\n${appUrl}/entry\n\nSign in with your department code *${p.code}*.\n\n— Chief Minister's Policy Office (CMPO)`,
-        );
+        const r = reminderTemplate
+          ? await this.whatsapp.sendTemplate(p.phone as string, reminderTemplate, {
+              "1": p.name,
+              "2": String(p._count.schemes),
+              "3": d.today,
+              "4": p.code,
+            })
+          : await this.whatsapp.send(
+              p.phone as string,
+              `*CM Initiative Tracker — ${label}*\n\nDear ${p.name},\n\nToday's progress entry for your ${p._count.schemes} priority scheme(s) is still pending.${finalLine}\n\nFill your daily sheet:\n${appUrl}/entry\n\nSign in with your department code *${p.code}*.\n\n— Chief Minister's Policy Office (CMPO)`,
+            );
         if (r.ok) waSent.push(p.code);
       }
     }

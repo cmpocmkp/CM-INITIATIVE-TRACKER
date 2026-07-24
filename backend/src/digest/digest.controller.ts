@@ -28,4 +28,11 @@ export class DigestController {
   remind(@Body() body: { attempt?: number }) {
     return this.digest.sendReminders(body?.attempt ?? 1);
   }
+
+  /** Manually send the WhatsApp daily progress report to the leadership list. */
+  @Post("whatsapp-report")
+  whatsappReport() {
+    return this.digest.sendWhatsappReport();
+  }
+
 }
