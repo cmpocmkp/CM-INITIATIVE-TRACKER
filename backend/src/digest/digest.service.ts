@@ -67,7 +67,8 @@ export class DigestService {
    * TWILIO_CONTENT_REPORT_SID) to WHATSAPP_REPORT_RECIPIENTS (comma list).
    */
   async sendWhatsappReport(): Promise<{ ok: boolean; reason?: string; sent: string[]; failed: string[] }> {
-    const template = process.env.TWILIO_CONTENT_REPORT_SID;
+    // Picture version (CMPO logo header) preferred when configured; text otherwise.
+    const template = process.env.TWILIO_CONTENT_REPORT_MEDIA_SID || process.env.TWILIO_CONTENT_REPORT_SID;
     const recipients = (process.env.WHATSAPP_REPORT_RECIPIENTS || "")
       .split(",")
       .map((s) => s.trim())
@@ -76,6 +77,7 @@ export class DigestService {
     if (!recipients.length) return { ok: false, reason: "WHATSAPP_REPORT_RECIPIENTS not set", sent: [], failed: [] };
 
     const d = await this.core.dashboard(SYSTEM_USER);
+    const pendingDepts = d.compliance.filter((c: any) => c.schemes > 0 && c.updatedToday === 0).length;
     const attention = d.attention?.length
       ? `${d.attention.length} site(s) halted/slow — ${d.attention
           .slice(0, 2)
@@ -93,12 +95,12 @@ export class DigestService {
             "2": String(d.totals.count),
             "3": d.totals.avgPhysical.toFixed(1),
             "4": `${d.totals.updatedToday}/${d.totals.count}`,
-            "5": attention,
-            "6": appUrl,
+            "5": String(pendingDepts),
+            "6": attention,
           })
         : await this.whatsapp.send(
             to,
-            `*CM Initiative Tracker — Daily Progress ${d.today}*\nSchemes: ${d.totals.count} | Physical: ${d.totals.avgPhysical.toFixed(1)}% | Updated today: ${d.totals.updatedToday}/${d.totals.count}\nAttention: ${attention}\nDashboard: ${appUrl}\n— CMPO`,
+            `*CM INITIATIVE TRACKER*\n_Daily Progress Report — ${d.today}_\nSchemes: *${d.totals.count}*\nPhysical Progress: *${d.totals.avgPhysical.toFixed(1)}%*\nReported Today: *${d.totals.updatedToday}/${d.totals.count}*\nDepartments Pending: *${pendingDepts}*\nNeeds Attention: ${attention}\n\nLive dashboard:\n${appUrl}\n_Chief Minister Policy Office (CMPO)_`,
           );
       (r.ok ? sent : failed).push(to);
     }
@@ -169,10 +171,11 @@ export class DigestService {
       for (const p of phones) {
         const r = reminderTemplate
           ? await this.whatsapp.sendTemplate(p.phone as string, reminderTemplate, {
-              "1": p.name,
-              "2": String(p._count.schemes),
-              "3": d.today,
-              "4": p.code,
+              "1": label,
+              "2": p.name,
+              "3": String(p._count.schemes),
+              "4": d.today,
+              "5": p.code,
             })
           : await this.whatsapp.send(
               p.phone as string,
@@ -230,10 +233,22 @@ export class DigestService {
     const waSent: string[] = [];
     const noEmail: string[] = [];
 
-    // WhatsApp credentials (departments with a phone set)
+    // WhatsApp credentials (departments with a phone set) — approved template
+    // preferred so it delivers cold; freeform fallback inside sessions.
+    const credentialsTemplate = process.env.TWILIO_CONTENT_CREDENTIALS_SID;
     if (this.whatsapp.configured) {
       for (const dept of depts) {
         if (!dept.phone) continue;
+        if (credentialsTemplate) {
+          const rt = await this.whatsapp.sendTemplate(dept.phone, credentialsTemplate, {
+            "1": dept.name,
+            "2": String(dept._count.schemes),
+            "3": dept.code,
+            "4": defaultPwd,
+          });
+          if (rt.ok) waSent.push(dept.code);
+          continue;
+        }
         const r = await this.whatsapp.send(
           dept.phone,
           `*CM Initiative Tracker* — Government of Khyber Pakhtunkhwa\n\nDear ${dept.name},\n\nThe Chief Minister's Office is tracking daily progress of CM priority schemes. Your department has *${dept._count.schemes} scheme(s)* on the platform.\n\n🌐 ${appUrl}\n👤 Username: *${dept.code}*\n🔑 Password: *${defaultPwd}* (change after first login)\n\nEvery day, open Daily Data Entry and fill: current phase, % complete, work done today, manpower & machinery, site status, and any issues.\n\n— Chief Minister Policy Office (CMPO)`,
