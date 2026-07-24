@@ -77,7 +77,7 @@ export function NumBox({ n, size = 30 }: { n: number; size?: number }) {
         width: size,
         height: size,
         borderRadius: Math.max(4, Math.round(size * 0.22)),
-        fontSize: Math.round(size * 0.72),
+        fontSize: Math.max(11, Math.round(size * 0.6)),
         fontWeight: 200,
         fontFamily: "'Segoe UI Light', 'Helvetica Neue', 'Segoe UI', Helvetica, Arial, sans-serif",
       }}
