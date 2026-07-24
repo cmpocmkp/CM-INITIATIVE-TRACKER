@@ -87,6 +87,20 @@ export function NumBox({ n, size = 30 }: { n: number; size?: number }) {
   );
 }
 
+/** Initiative marker for scheme tables: initiative #1 renders as a "PRP" pill, others as their number box. */
+export function InitTag({ number, size = 22 }: { number: number; size?: number }) {
+  if (number === 1)
+    return (
+      <span
+        className="inline-flex shrink-0 items-center justify-center border border-white/25 bg-transparent px-1.5 leading-none text-white"
+        style={{ height: size, borderRadius: Math.max(4, Math.round(size * 0.22)), fontSize: 10, letterSpacing: "0.06em", fontWeight: 300 }}
+      >
+        PRP
+      </span>
+    );
+  return <NumBox n={number} size={size} />;
+}
+
 export function Heading({ title, subtitle, action }: { title: string; subtitle?: React.ReactNode; action?: React.ReactNode }) {
   return (
     <div className="mb-5 flex flex-wrap items-end justify-between gap-3">

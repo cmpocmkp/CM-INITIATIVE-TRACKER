@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { api, Scheme, STAGES, Stage, Update, fmtM, fmtPct, fmtDate, fmtDelta } from "../api";
+import { cleanName, api, Scheme, STAGES, Stage, Update, fmtM, fmtPct, fmtDate, fmtDelta } from "../api";
 import { useAuth, isStaff } from "../auth";
 import { Heading, Spinner, ErrorBox, Bar, StageBadge, SiteBadge, Delta, Empty } from "../ui";
 
@@ -33,9 +33,9 @@ function HistoryTable({ updates, showMoney }: { updates: Update[]; showMoney: bo
             const delta = fmtDelta(x.physicalProgressPct, prev?.physicalProgressPct ?? null);
             return (
               <tr key={x.id} className="border-b border-white/[0.07] align-top hover:bg-navy-50/30">
-                <td className="td whitespace-nowrap font-medium text-navy-800">{fmtDate(x.reportDate)}</td>
+                <td className="td whitespace-nowrap text-white/85">{fmtDate(x.reportDate)}</td>
                 <td className="td whitespace-nowrap text-[12px]">{x.phase ?? "—"}</td>
-                <td className="td whitespace-nowrap text-right font-semibold">{fmtPct(x.physicalProgressPct)}</td>
+                <td className="td whitespace-nowrap text-right tabular-nums">{fmtPct(x.physicalProgressPct)}</td>
                 <td className="td text-center">
                   <Delta value={delta} />
                 </td>
@@ -44,8 +44,8 @@ function HistoryTable({ updates, showMoney }: { updates: Update[]; showMoney: bo
                 <td className="td">
                   <SiteBadge status={x.siteStatus} />
                 </td>
-                {showMoney && <td className="td whitespace-nowrap text-right">{x.fundsReleased?.toLocaleString() ?? "—"}</td>}
-                {showMoney && <td className="td whitespace-nowrap text-right">{x.expenditure?.toLocaleString() ?? "—"}</td>}
+                {showMoney && <td className="td whitespace-nowrap text-right">{x.fundsReleased?.toLocaleString(undefined, { maximumFractionDigits: 1 }) ?? "—"}</td>}
+                {showMoney && <td className="td whitespace-nowrap text-right">{x.expenditure?.toLocaleString(undefined, { maximumFractionDigits: 1 }) ?? "—"}</td>}
                 {showMoney && <td className="td whitespace-nowrap text-right">{x.financialProgressPct != null ? `${x.financialProgressPct.toFixed(1)}%` : "—"}</td>}
                 <td className="td max-w-[240px] text-[12px] text-white/75">{x.narrative ?? <span className="text-white/30">—</span>}</td>
                 <td className="td max-w-[220px] text-[12px]">
@@ -75,6 +75,58 @@ export default function SchemeDetail() {
   const [err, setErr] = useState("");
   const [msg, setMsg] = useState("");
   const [openSub, setOpenSub] = useState<string | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [depts, setDepts] = useState<{ id: string; name: string; code: string }[]>([]);
+  const [inits, setInits] = useState<{ id: string; number: number; shortName: string }[]>([]);
+  const [form, setForm] = useState<Record<string, string | boolean>>({});
+  const [savingEdit, setSavingEdit] = useState(false);
+  const superadmin = user?.role === "SUPERADMIN";
+
+  function openEditor() {
+    if (!s) return;
+    setForm({
+      name: s.name,
+      adpCode: s.adpCode ?? "",
+      sector: s.sector,
+      departmentId: s.department?.id ?? "",
+      initiativeId: s.initiative?.id ?? "",
+      implementingAgency: s.implementingAgency ?? "",
+      totalCost: s.totalCost != null ? String(s.totalCost) : "",
+      adpAllocation: s.adpAllocation != null ? String(s.adpAllocation) : "",
+      isOfficial: !!s.isOfficial,
+      isPRP: !!s.isPRP,
+    });
+    if (!depts.length) api.get<{ id: string; name: string; code: string }[]>("/departments").then(setDepts).catch(() => {});
+    if (!inits.length) api.get<{ id: string; number: number; shortName: string }[]>("/initiatives").then(setInits).catch(() => {});
+    setEditOpen(true);
+  }
+
+  async function saveEdit() {
+    if (!id) return;
+    setSavingEdit(true);
+    setMsg("");
+    try {
+      await api.patch(`/schemes/${id}`, {
+        name: form.name,
+        adpCode: form.adpCode,
+        sector: form.sector,
+        departmentId: form.departmentId,
+        initiativeId: form.initiativeId || null,
+        implementingAgency: form.implementingAgency,
+        totalCost: form.totalCost === "" ? null : Number(form.totalCost),
+        adpAllocation: form.adpAllocation === "" ? null : Number(form.adpAllocation),
+        isOfficial: form.isOfficial,
+        isPRP: form.isPRP,
+      });
+      setMsg("\u2713 Scheme updated");
+      setEditOpen(false);
+      load();
+    } catch (e) {
+      setMsg(`\u2717 ${(e as Error).message}`);
+    } finally {
+      setSavingEdit(false);
+    }
+  }
 
   const canEdit = !!user && (isStaff(user) || user.departmentId === s?.department?.id);
 
@@ -122,9 +174,14 @@ export default function SchemeDetail() {
               <div className="text-[11px] uppercase tracking-wider text-navy-600">
                 {s.sector} {s.adpCode ? `· ADP ${s.adpCode}` : ""} {s.isPRP ? "· Peshawar Revitalization Plan" : ""}
               </div>
-              <h1 className="mt-1 text-lg font-bold leading-snug text-navy-900">{s.name}</h1>
+              <h1 className="mt-1 text-lg font-bold leading-snug text-navy-900">{cleanName(s.name)}</h1>
             </div>
             <div className="text-right">
+              {superadmin && (
+                <button className="btn-ghost mb-2 px-3 py-1 text-[11px]" onClick={openEditor}>
+                  \u270e Edit Scheme
+                </button>
+              )}
               <div className="text-[10px] uppercase tracking-wider text-white/40">Lifecycle (PC-1 etc.)</div>
               {canEdit ? (
                 <select
@@ -312,6 +369,73 @@ export default function SchemeDetail() {
           </>
         )}
       </div>
+
+      {editOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setEditOpen(false)}>
+          <div className="card scroll-thin max-h-[90vh] w-full max-w-2xl overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+            <h2 className="mb-4 text-sm uppercase tracking-widest text-white/95">Edit Scheme</h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label className="label">Scheme name</label>
+                <textarea className="input" rows={2} value={String(form.name ?? "")} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              </div>
+              <div>
+                <label className="label">ADP code</label>
+                <input className="input" value={String(form.adpCode ?? "")} onChange={(e) => setForm({ ...form, adpCode: e.target.value })} />
+              </div>
+              <div>
+                <label className="label">Sector</label>
+                <input className="input" value={String(form.sector ?? "")} onChange={(e) => setForm({ ...form, sector: e.target.value })} />
+              </div>
+              <div>
+                <label className="label">Owner department (data entry)</label>
+                <select className="input" value={String(form.departmentId ?? "")} onChange={(e) => setForm({ ...form, departmentId: e.target.value })}>
+                  {depts.map((d) => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="label">Initiative</label>
+                <select className="input" value={String(form.initiativeId ?? "")} onChange={(e) => setForm({ ...form, initiativeId: e.target.value })}>
+                  <option value="">\u2014 none \u2014</option>
+                  {inits.map((i) => (
+                    <option key={i.id} value={i.id}>#{i.number} {i.shortName}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="label">Implementation (executing agency)</label>
+                <input className="input" placeholder="PDA, WSSP, CMGP\u2026" value={String(form.implementingAgency ?? "")} onChange={(e) => setForm({ ...form, implementingAgency: e.target.value })} />
+              </div>
+              <div>
+                <label className="label">Total cost (Rs M)</label>
+                <input className="input" inputMode="decimal" value={String(form.totalCost ?? "")} onChange={(e) => setForm({ ...form, totalCost: e.target.value })} />
+              </div>
+              <div>
+                <label className="label">ADP allocation (Rs M)</label>
+                <input className="input" inputMode="decimal" value={String(form.adpAllocation ?? "")} onChange={(e) => setForm({ ...form, adpAllocation: e.target.value })} />
+              </div>
+              <div className="flex items-center gap-5 sm:col-span-2">
+                <label className="flex cursor-pointer items-center gap-2 text-[13px] text-white/75">
+                  <input type="checkbox" className="h-4 w-4 accent-white" checked={!!form.isOfficial} onChange={(e) => setForm({ ...form, isOfficial: e.target.checked })} />
+                  Official scheme (counts in the 112)
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 text-[13px] text-white/75">
+                  <input type="checkbox" className="h-4 w-4 accent-white" checked={!!form.isPRP} onChange={(e) => setForm({ ...form, isPRP: e.target.checked })} />
+                  Part of PRP
+                </label>
+              </div>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button className="btn-ghost" onClick={() => setEditOpen(false)}>Cancel</button>
+              <button className="btn-primary" onClick={saveEdit} disabled={savingEdit}>
+                {savingEdit ? "Saving\u2026" : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

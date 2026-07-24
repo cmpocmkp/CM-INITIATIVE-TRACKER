@@ -372,6 +372,62 @@ export class CoreService {
     return { ok: true };
   }
 
+  /** Superadmin scheme editor — whitelisted fields only. */
+  async updateScheme(id: string, body: Record<string, unknown>) {
+    const scheme = await this.prisma.scheme.findUnique({ where: { id } });
+    if (!scheme) throw new NotFoundException("Scheme not found");
+    const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+    const num = (v: unknown) => {
+      if (v == null || v === "") return null;
+      const n = Number(v);
+      if (Number.isNaN(n) || n < 0) throw new BadRequestException("Invalid number");
+      return n;
+    };
+    const data: Prisma.SchemeUpdateInput = {};
+    if ("name" in body) {
+      const v = str(body.name);
+      if (!v) throw new BadRequestException("Name cannot be empty");
+      data.name = v;
+    }
+    if ("adpCode" in body) data.adpCode = str(body.adpCode);
+    if ("sector" in body) {
+      const v = str(body.sector);
+      if (!v) throw new BadRequestException("Sector cannot be empty");
+      data.sector = v;
+    }
+    if ("implementingAgency" in body) data.implementingAgency = str(body.implementingAgency);
+    if ("totalCost" in body) data.totalCost = num(body.totalCost);
+    if ("adpAllocation" in body) data.adpAllocation = num(body.adpAllocation);
+    if ("isOfficial" in body) data.isOfficial = !!body.isOfficial;
+    if ("isPRP" in body) data.isPRP = !!body.isPRP;
+    if ("departmentId" in body) {
+      const deptId = str(body.departmentId);
+      if (!deptId) throw new BadRequestException("Department is required");
+      const dept = await this.prisma.department.findUnique({ where: { id: deptId } });
+      if (!dept) throw new BadRequestException("Unknown department");
+      data.department = { connect: { id: deptId } };
+    }
+    if ("initiativeId" in body) {
+      const initId = str(body.initiativeId);
+      if (initId) {
+        const init = await this.prisma.initiative.findUnique({ where: { id: initId } });
+        if (!init) throw new BadRequestException("Unknown initiative");
+        data.initiative = { connect: { id: initId } };
+      } else {
+        data.initiative = { disconnect: true };
+      }
+    }
+    if (!Object.keys(data).length) throw new BadRequestException("Nothing to update");
+    return this.prisma.scheme.update({
+      where: { id },
+      data,
+      include: {
+        department: { select: { id: true, name: true, code: true } },
+        initiative: { select: { id: true, number: true, shortName: true } },
+      },
+    });
+  }
+
   // ── Daily sheet (Excel-style, with Δ vs previous report) ─────
   async sheet(user: SessionUser, dateStr?: string) {
     // Departments always see the current reporting week's sheet (Monday, PKT);

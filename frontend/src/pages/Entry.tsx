@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { api, PHASES, SheetRow, SiteStatus, SITE_STATUSES, Update, fmtDate, fmtDelta, fmtPct } from "../api";
+import { cleanName, api, PHASES, SheetRow, SiteStatus, SITE_STATUSES, Update, fmtDate, fmtDelta, fmtPct } from "../api";
 import { Heading, Spinner, ErrorBox, Delta, cn } from "../ui";
 
 // ── Typed input sanitizers (regex-enforced while typing) ──────
@@ -439,11 +439,11 @@ export default function Entry() {
                     {/* Name (frozen) */}
                     <td className={cn("grid-td sticky left-0 z-10 shadow-[2px_0_4px_-2px_rgba(11,74,104,0.12)]", nameBg)}>
                       <div className={cn("px-3 py-2", fr.isSub && "pl-8")}>
-                        <div className={cn("truncate text-[13px] font-medium leading-tight", isInit ? "text-navy-800" : fr.isSub ? "text-white/60" : "text-white/95")} title={fr.name}>
+                        <div className={cn("truncate text-[13px] leading-tight", isInit ? "text-navy-800" : fr.isSub ? "text-white/60" : "text-white/95")} title={cleanName(fr.name)}>
                           {fr.isSub && <span className="mr-1.5 text-navy-300">└</span>}
                           {fr.tag === "INITIATIVE" && <span className="mr-1.5 rounded bg-white/90 px-1 py-px text-[9px] font-bold text-black">INITIATIVE</span>}
                           {fr.tag === "PRP" && <span className="mr-1.5 rounded bg-navy-50 px-1 py-px text-[9px] font-bold text-navy-600 ring-1 ring-navy-200">PRP</span>}
-                          {fr.name}
+                          {cleanName(fr.name)}
                         </div>
                         <div className="mt-0.5 flex items-center gap-2 whitespace-nowrap text-[10.5px] text-white/40">
                           {fr.adpCode && <span className="font-medium text-white/40">#{fr.adpCode}</span>}

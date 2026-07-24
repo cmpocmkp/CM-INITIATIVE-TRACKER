@@ -124,6 +124,12 @@ export class CoreController {
     return { ok: true, started: true };
   }
 
+  @Patch("schemes/:id")
+  @Roles("SUPERADMIN")
+  updateScheme(@Param("id") id: string, @Body() body: Record<string, unknown>) {
+    return this.core.updateScheme(id, body);
+  }
+
   @Get("pcfms/status")
   @Roles("SUPERADMIN", "ADMIN")
   pcfmsStatus() {

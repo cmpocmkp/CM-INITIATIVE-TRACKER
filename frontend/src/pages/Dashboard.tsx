@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, Dashboard as Dash, deptShort, fmtM, fmtPct } from "../api";
+import { cleanName, api, Dashboard as Dash, deptShort, fmtM, fmtPct } from "../api";
 import { useAuth, isStaff } from "../auth";
 import { Kpi, Bar, Heading, Spinner, ErrorBox, NumBox } from "../ui";
 
@@ -123,7 +123,7 @@ export default function Dashboard() {
                   </span>
                   <span className="w-16 shrink-0 text-[11px] tracking-wide text-white/40">{a.dept}</span>
                   <span className="min-w-0 flex-1 truncate text-[13px] text-white/90 transition-colors group-hover:text-white">
-                    {a.name}
+                    {cleanName(a.name)}
                   </span>
                 </div>
                 {a.note && (

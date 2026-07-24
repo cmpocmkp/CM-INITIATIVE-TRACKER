@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { api, Scheme, fmtPct, fmtDate } from "../api";
+import { cleanName, api, Scheme, deptShort, fmtPct, fmtDate } from "../api";
 import { useAuth, isStaff } from "../auth";
-import { Heading, Spinner, ErrorBox, Bar, StageBadge, NumBox } from "../ui";
+import { Heading, Spinner, ErrorBox, Bar, StageBadge, InitTag } from "../ui";
 
 export default function Schemes() {
   const { user } = useAuth();
@@ -39,7 +39,9 @@ export default function Schemes() {
       return (
         s.name.toLowerCase().includes(t) ||
         (s.adpCode ?? "").includes(t) ||
-        s.sector.toLowerCase().includes(t)
+        s.sector.toLowerCase().includes(t) ||
+        (s.department?.name ?? "").toLowerCase().includes(t) ||
+        (s.implementingAgency ?? "").toLowerCase().includes(t)
       );
     }
     return true;
@@ -77,12 +79,15 @@ export default function Schemes() {
 
       <div className="card overflow-hidden">
         <div className="scroll-thin overflow-x-auto">
-          <table className="w-full" style={{ minWidth: 1000 }}>
+          <table className="w-full" style={{ minWidth: 1340 }}>
             <thead>
               <tr className="border-b border-white/10 bg-white/[0.04]">
                 <th className="th">Initiative</th>
+                <th className="th">Code</th>
                 <th className="th">Scheme</th>
-                <th className="th">Sector / Dept</th>
+                <th className="th">Sector</th>
+                <th className="th">Department</th>
+                <th className="th">Implementation</th>
                 <th className="th !text-right">Cost (M)</th>
                 <th className="th !text-right">Alloc (M)</th>
                 <th className="th !text-right">Spent (M)</th>
@@ -104,32 +109,41 @@ export default function Schemes() {
                           title={`#${s.initiative.number} ${s.initiative.shortName}`}
                           className="inline-flex items-center gap-1.5 hover:opacity-70"
                         >
-                          <NumBox n={s.initiative.number} size={22} />
+                          <InitTag number={s.initiative.number} />
                         </Link>
                       ) : (
                         <span className="text-white/30">—</span>
                       )}
                     </td>
+                    <td className="td whitespace-nowrap text-[12px] tabular-nums text-white/50">{s.adpCode ?? "—"}</td>
                     <td className="td max-w-[360px]">
-                      <Link to={`/schemes/${s.id}`} className="font-medium text-navy-800 hover:text-navy-600">
-                        {s.adpCode && <span className="mr-1.5 text-[11px] text-white/40">{s.adpCode}</span>}
-                        {s.name}
+                      <Link to={`/schemes/${s.id}`} className="text-white/90 hover:text-white hover:underline">
+                        {cleanName(s.name)}
                       </Link>
-                      {s.isPRP && (
-                        <span className="ml-1.5 rounded bg-navy-100 px-1.5 py-0.5 text-[10px] font-bold text-navy-700">PRP</span>
-                      )}
                       {(s.subProjects?.length ?? 0) > 0 && (
                         <span className="ml-1.5 text-[10px] font-semibold text-white/40">{s.subProjects!.length} work items</span>
                       )}
                     </td>
                     <td className="td whitespace-nowrap text-[12px]">{s.sector}</td>
-                    <td className="td whitespace-nowrap text-right">{s.totalCost?.toLocaleString() ?? "—"}</td>
-                    <td className="td whitespace-nowrap text-right">{s.adpAllocation?.toLocaleString() ?? "—"}</td>
-                    <td className="td whitespace-nowrap text-right">{u?.expenditure?.toLocaleString() ?? "—"}</td>
+                    <td className="td whitespace-nowrap text-[12px]" title={s.department?.name}>
+                      {deptShort(s.department)}
+                    </td>
+                    <td className="td whitespace-nowrap text-[12px]">
+                      {s.implementingAgency ? (
+                        <span className="rounded-md border border-white/20 bg-white/[0.06] px-1.5 py-0.5 text-[11px] text-white/80">
+                          {s.implementingAgency}
+                        </span>
+                      ) : (
+                        <span className="text-white/30">—</span>
+                      )}
+                    </td>
+                    <td className="td whitespace-nowrap text-right">{s.totalCost?.toLocaleString(undefined, { maximumFractionDigits: 1 }) ?? "—"}</td>
+                    <td className="td whitespace-nowrap text-right">{s.adpAllocation?.toLocaleString(undefined, { maximumFractionDigits: 1 }) ?? "—"}</td>
+                    <td className="td whitespace-nowrap text-right">{u?.expenditure?.toLocaleString(undefined, { maximumFractionDigits: 1 }) ?? "—"}</td>
                     <td className="td w-36">
                       <div className="flex items-center gap-2">
                         <Bar value={phys ?? 0} className="w-20" />
-                        <span className="text-xs font-semibold">{fmtPct(phys)}</span>
+                        <span className="text-xs tabular-nums">{fmtPct(phys)}</span>
                       </div>
                     </td>
                     <td className="td">

@@ -264,11 +264,16 @@ export const PHASES = [
 ] as const;
 
 // ── Formatters ────────────────────────────────────────────────
+/** Display name: the "(PRP)" suffix is redundant in tables — the PRP tag carries it. */
+export const cleanName = (n: string): string => n.replace(/\s*\(PRP\)\.?/g, "");
 export const fmtM = (n?: number | null): string => {
   if (n == null) return "—";
-  if (Math.abs(n) >= 1000) return `Rs ${(n / 1000).toLocaleString(undefined, { maximumFractionDigits: 2 })} Bn`;
-  return `Rs ${n.toLocaleString(undefined, { maximumFractionDigits: n < 10 ? 2 : 0 })} M`;
+  if (Math.abs(n) >= 1000) return `Rs ${(n / 1000).toLocaleString(undefined, { maximumFractionDigits: 1 })} Bn`;
+  return `Rs ${n.toLocaleString(undefined, { maximumFractionDigits: 1 })} M`;
 };
+/** Table number: thousands separators, max ONE decimal (house style). */
+export const fmtNum = (n?: number | null): string =>
+  n == null ? "—" : n.toLocaleString(undefined, { maximumFractionDigits: 1 });
 export const fmtPct = (n?: number | null): string => (n == null ? "—" : `${Math.round(n)}%`);
 export const fmtDate = (d?: string | null): string =>
   d ? new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";

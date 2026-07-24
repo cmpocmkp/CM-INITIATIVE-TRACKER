@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, Scheme, deptShort, fmtM, fmtPct, fmtDate } from "../api";
+import { cleanName, api, Scheme, deptShort, fmtM, fmtPct, fmtDate } from "../api";
 import { Heading, Spinner, ErrorBox, Bar, StageBadge, Kpi } from "../ui";
 
 export default function PRP() {
@@ -60,7 +60,7 @@ export default function PRP() {
                     <td className="td max-w-[420px]">
                       <Link to={`/schemes/${s.id}`} className="text-white/90 hover:text-white hover:underline">
                         {s.adpCode && <span className="mr-1.5 text-[11px] text-white/40">{s.adpCode}</span>}
-                        {s.name}
+                        {cleanName(s.name)}
                       </Link>
                       {(s.subProjects?.length ?? 0) > 0 && (
                         <span className="ml-1.5 text-[10px] text-white/40">{s.subProjects!.length} work items</span>
@@ -87,9 +87,9 @@ export default function PRP() {
                         <span className="text-white/30">—</span>
                       )}
                     </td>
-                    <td className="td whitespace-nowrap text-right tabular-nums">{s.totalCost?.toLocaleString() ?? "—"}</td>
-                    <td className="td whitespace-nowrap text-right tabular-nums">{s.adpAllocation?.toLocaleString() ?? "—"}</td>
-                    <td className="td whitespace-nowrap text-right tabular-nums">{u?.expenditure?.toLocaleString() ?? "—"}</td>
+                    <td className="td whitespace-nowrap text-right tabular-nums">{s.totalCost?.toLocaleString(undefined, { maximumFractionDigits: 1 }) ?? "—"}</td>
+                    <td className="td whitespace-nowrap text-right tabular-nums">{s.adpAllocation?.toLocaleString(undefined, { maximumFractionDigits: 1 }) ?? "—"}</td>
+                    <td className="td whitespace-nowrap text-right tabular-nums">{u?.expenditure?.toLocaleString(undefined, { maximumFractionDigits: 1 }) ?? "—"}</td>
                     <td className="td">
                       <div className="flex items-center gap-2">
                         <Bar value={phys ?? 0} className="w-24" />

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { api, Scheme, Update, fmtM, fmtPct, fmtDate } from "../api";
-import { Heading, Spinner, ErrorBox, Bar, StageBadge, Kpi, NumBox } from "../ui";
+import { cleanName, api, Scheme, Update, fmtM, fmtPct, fmtDate } from "../api";
+import { Heading, Spinner, ErrorBox, Bar, StageBadge, Kpi, InitTag } from "../ui";
 
 interface DeptDetail {
   id: string;
@@ -78,21 +78,21 @@ export default function DepartmentDetail() {
                 return (
                   <tr key={s.id} className="border-b border-white/[0.07] hover:bg-white/[0.06]">
                     <td className="td whitespace-nowrap">
-                      {s.initiative ? <NumBox n={s.initiative.number} size={22} /> : <span className="text-white/30">—</span>}
+                      {s.initiative ? <InitTag number={s.initiative.number} /> : <span className="text-white/30">—</span>}
                     </td>
                     <td className="td max-w-[360px]">
-                      <Link to={`/schemes/${s.id}`} className="font-medium text-navy-800 hover:text-navy-600">
+                      <Link to={`/schemes/${s.id}`} className="text-white/90 hover:text-white hover:underline">
                         {s.adpCode && <span className="mr-1.5 text-[11px] text-white/40">{s.adpCode}</span>}
-                        {s.name}
+                        {cleanName(s.name)}
                       </Link>
                     </td>
-                    <td className="td whitespace-nowrap text-right">{s.totalCost?.toLocaleString() ?? "—"}</td>
-                    <td className="td whitespace-nowrap text-right">{s.adpAllocation?.toLocaleString() ?? "—"}</td>
-                    <td className="td whitespace-nowrap text-right">{u?.expenditure?.toLocaleString() ?? "—"}</td>
+                    <td className="td whitespace-nowrap text-right">{s.totalCost?.toLocaleString(undefined, { maximumFractionDigits: 1 }) ?? "—"}</td>
+                    <td className="td whitespace-nowrap text-right">{s.adpAllocation?.toLocaleString(undefined, { maximumFractionDigits: 1 }) ?? "—"}</td>
+                    <td className="td whitespace-nowrap text-right">{u?.expenditure?.toLocaleString(undefined, { maximumFractionDigits: 1 }) ?? "—"}</td>
                     <td className="td w-36">
                       <div className="flex items-center gap-2">
                         <Bar value={phys ?? 0} className="w-20" />
-                        <span className="text-xs font-semibold">{fmtPct(phys)}</span>
+                        <span className="text-xs tabular-nums">{fmtPct(phys)}</span>
                       </div>
                     </td>
                     <td className="td">

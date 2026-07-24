@@ -51,7 +51,7 @@ export function SectorBars({
           itemStyle={tooltipItemStyle}
           labelStyle={tooltipItemStyle}
           formatter={(v: number, name: string) => [
-            v >= 1000 ? `Rs ${(v / 1000).toFixed(2)} Bn` : `Rs ${v.toFixed(0)} M`,
+            v >= 1000 ? `Rs ${(v / 1000).toFixed(1)} Bn` : `Rs ${v.toFixed(0)} M`,
             name === "alloc" ? "ADP Allocation" : "Expenditure",
           ]}
         />

@@ -106,9 +106,9 @@ export default function InitiativeDetail() {
                         </Link>
                       </td>
                       <td className="td whitespace-nowrap text-[12px]">{s.department?.code}</td>
-                      <td className="td whitespace-nowrap text-right">{s.totalCost?.toLocaleString() ?? "—"}</td>
-                      <td className="td whitespace-nowrap text-right">{s.adpAllocation?.toLocaleString() ?? "—"}</td>
-                      <td className="td whitespace-nowrap text-right">{u?.expenditure?.toLocaleString() ?? "—"}</td>
+                      <td className="td whitespace-nowrap text-right">{s.totalCost?.toLocaleString(undefined, { maximumFractionDigits: 1 }) ?? "—"}</td>
+                      <td className="td whitespace-nowrap text-right">{s.adpAllocation?.toLocaleString(undefined, { maximumFractionDigits: 1 }) ?? "—"}</td>
+                      <td className="td whitespace-nowrap text-right">{u?.expenditure?.toLocaleString(undefined, { maximumFractionDigits: 1 }) ?? "—"}</td>
                       <td className="td w-40">
                         <div className="flex items-center gap-2">
                           <Bar value={phys ?? 0} className="w-24" />
