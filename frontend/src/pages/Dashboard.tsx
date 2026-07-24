@@ -48,11 +48,11 @@ export default function Dashboard() {
       {/* KPI row */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
         <Kpi
-          label="Priority Schemes"
+          label="All Schemes"
           value={d.totals.officialCount ?? d.totals.count}
           sub={`${d.totals.completed} completed${d.totals.officialCount && d.totals.count > d.totals.officialCount ? ` · ${d.totals.count - d.totals.officialCount} work items` : ""}`}
         />
-        <Kpi label="Portfolio Cost" value={fmtM(d.totals.totalCost)} />
+        <Kpi label="Cost" value={fmtM(d.totals.totalCost)} />
         <Kpi label="ADP Allocation" value={fmtM(d.totals.totalAlloc)} />
         <Kpi label="Expenditure" value={fmtM(d.totals.totalSpent)} sub={`${fmtM(d.totals.totalReleased)} released`} />
         <Kpi label="Physical Progress" value={fmtPct(d.totals.avgPhysical)} />
