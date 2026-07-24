@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, fmtM, fmtPct } from "../api";
-import { Heading, Spinner, ErrorBox } from "../ui";
+import { Heading, Spinner, ErrorBox, Bar } from "../ui";
 
 interface SectorRow {
   sector: string;
@@ -26,53 +26,43 @@ export default function Sectors() {
 
   return (
     <div className="space-y-5">
-      <Heading title="Sector" subtitle="Schemes grouped by ADP sector — independent of the owning department." />
+      <Heading title="Sector" />
 
-      <div className="card overflow-hidden">
-        <div className="scroll-thin overflow-x-auto">
-          <table className="w-full" style={{ minWidth: 860 }}>
-            <thead>
-              <tr className="border-b border-white/10">
-                <th className="th">Sector</th>
-                <th className="th !text-right">Schemes</th>
-                <th className="th !text-right">Cost (M)</th>
-                <th className="th !text-right">Allocation (M)</th>
-                <th className="th !text-right">Spent (M)</th>
-                <th className="th" style={{ minWidth: 170 }}>Physical</th>
-                <th className="th !text-right">Updated This Week</th>
-              </tr>
-            </thead>
-            <tbody>
-              {list.map((r) => (
-                <tr key={r.sector} className="border-b border-white/[0.07] hover:bg-white/[0.06]">
-                  <td className="td">
-                    <Link to={`/sectors/${encodeURIComponent(r.sector)}`} className="text-white/95 hover:underline">
-                      {r.sector}
-                    </Link>
-                  </td>
-                  <td className="td text-right tabular-nums">{r.count}</td>
-                  <td className="td text-right tabular-nums">{r.cost ? r.cost.toLocaleString(undefined, { maximumFractionDigits: 0 }) : "—"}</td>
-                  <td className="td text-right tabular-nums">{r.alloc ? r.alloc.toLocaleString(undefined, { maximumFractionDigits: 0 }) : "—"}</td>
-                  <td className="td text-right tabular-nums">{r.spent ? r.spent.toLocaleString(undefined, { maximumFractionDigits: 0 }) : "—"}</td>
-                  <td className="td">
-                    <div className="flex items-center gap-2">
-                      <span className="h-[3px] w-28 overflow-hidden rounded-full bg-white/10">
-                        <span className="block h-full bg-white/85" style={{ width: `${Math.min(100, r.avgPhysical)}%` }} />
-                      </span>
-                      <span className="text-[12px] tabular-nums text-white/75">{fmtPct(r.avgPhysical)}</span>
-                    </div>
-                  </td>
-                  <td className="td text-right tabular-nums text-white/50">
-                    {r.updatedToday}/{r.count}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="border-t border-white/[0.07] px-4 py-2 text-[11px] text-white/40">
-          {list.length} sectors · total allocation {fmtM(list.reduce((a, r) => a + r.alloc, 0))}
-        </div>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {list.map((s) => (
+          <Link
+            key={s.sector}
+            to={`/sectors/${encodeURIComponent(s.sector)}`}
+            className="card group p-4 transition hover:border-white/30 hover:shadow-md"
+          >
+            <h3 className="truncate text-[14px] leading-snug text-white/95" title={s.sector}>
+              {s.sector}
+            </h3>
+            <div className="mt-1 text-[11px] text-white/50">
+              {s.updatedToday}/{s.count} reported this week
+            </div>
+
+            <div className="mt-2.5 flex items-center gap-2">
+              <Bar value={s.avgPhysical} className="flex-1" />
+              <div className="text-[13px] text-navy-800">{fmtPct(s.avgPhysical)}</div>
+            </div>
+
+            <div className="mt-2.5 grid grid-cols-3 gap-1 border-t border-white/[0.07] pt-2 text-center">
+              <div>
+                <div className="text-[9px] uppercase tracking-wide text-white/40">Schemes</div>
+                <div className="text-[12px] text-navy-900">{s.count}</div>
+              </div>
+              <div>
+                <div className="text-[9px] uppercase tracking-wide text-white/40">Allocation</div>
+                <div className="text-[12px] text-navy-900">{fmtM(s.alloc)}</div>
+              </div>
+              <div>
+                <div className="text-[9px] uppercase tracking-wide text-white/40">Spent</div>
+                <div className="text-[12px] text-navy-900">{fmtM(s.spent)}</div>
+              </div>
+            </div>
+          </Link>
+        ))}
       </div>
     </div>
   );

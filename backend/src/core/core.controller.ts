@@ -2,6 +2,9 @@ import { Body, Controller, Delete, Get, Header, Param, Patch, Post, Query } from
 import { SchemeStage } from "@prisma/client";
 import { CoreService, SheetEntryInput } from "./core.service";
 import { PcfmsService } from "./pcfms.service";
+import { ReportsService } from "./reports.service";
+import type { Response } from "express";
+import { Res } from "@nestjs/common";
 import { CurrentUser, Roles, SessionUser } from "../auth/decorators";
 
 @Controller()
@@ -9,6 +12,7 @@ export class CoreController {
   constructor(
     private core: CoreService,
     private pcfms: PcfmsService,
+    private reports: ReportsService,
   ) {}
 
   @Get("dashboard")
@@ -128,6 +132,30 @@ export class CoreController {
   @Roles("SUPERADMIN")
   updateScheme(@Param("id") id: string, @Body() body: Record<string, unknown>) {
     return this.core.updateScheme(id, body);
+  }
+
+  @Get("reports/reconciliation")
+  @Roles("SUPERADMIN", "ADMIN")
+  reconciliation() {
+    return this.reports.reconciliation();
+  }
+
+  @Get("reports/initiative/:id.pdf")
+  @Roles("SUPERADMIN", "ADMIN")
+  async initiativePdf(@Param("id") id: string, @Res() res: Response) {
+    const { buffer, filename } = await this.reports.initiativeOnePager(id);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send(buffer);
+  }
+
+  @Get("reports/schemes.pdf")
+  @Roles("SUPERADMIN", "ADMIN")
+  async schemesPdf(@Res() res: Response) {
+    const { buffer, filename } = await this.reports.schemesListPdf();
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send(buffer);
   }
 
   @Get("pcfms/status")

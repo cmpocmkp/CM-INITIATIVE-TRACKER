@@ -41,15 +41,18 @@ export default function InitiativeDetail() {
         <div className="border-b border-white/10 bg-white/[0.05] px-6 py-5">
           <div className="flex items-center gap-3">
             <span
-              className="inline-flex h-11 w-11 shrink-0 items-center justify-center border border-white/15 bg-transparent text-[32px] font-light leading-none text-white/95"
-              style={{ fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif" }}
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-white/25 bg-transparent text-[26px] leading-none text-white"
+              style={{ fontFamily: "'Segoe UI Light', 'Helvetica Neue', 'Segoe UI', Helvetica, Arial, sans-serif", fontWeight: 200 }}
             >
               {i.number}
             </span>
-            <div>
+            <div className="min-w-0 flex-1">
               <div className="text-[11px] uppercase tracking-wider text-navy-600">{i.category} · CM Focus Initiative</div>
               <h1 className="text-xl font-bold text-navy-900">{i.name}</h1>
             </div>
+            <a href={`/api/reports/initiative/${i.id}.pdf`} download className="btn-ghost shrink-0 px-3 py-1.5 text-xs">
+              ⬇ One-Pager (PDF)
+            </a>
           </div>
           <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
             {[

@@ -58,11 +58,14 @@ export default function DepartmentDetail() {
           <h2 className="text-sm font-bold uppercase tracking-wide text-navy-900">Priority Schemes</h2>
         </div>
         <div className="scroll-thin overflow-x-auto">
-          <table className="w-full" style={{ minWidth: 900 }}>
+          <table className="w-full" style={{ minWidth: 1200 }}>
             <thead>
               <tr className="border-b border-white/10 bg-white/[0.04]">
                 <th className="th">Initiative</th>
+                <th className="th">Code</th>
                 <th className="th">Scheme</th>
+                <th className="th">Sector</th>
+                <th className="th">Implementation</th>
                 <th className="th !text-right">Cost (M)</th>
                 <th className="th !text-right">Alloc (M)</th>
                 <th className="th !text-right">Spent (M)</th>
@@ -80,11 +83,21 @@ export default function DepartmentDetail() {
                     <td className="td whitespace-nowrap">
                       {s.initiative ? <InitTag number={s.initiative.number} /> : <span className="text-white/30">—</span>}
                     </td>
+                    <td className="td whitespace-nowrap text-[12px] tabular-nums text-white/50">{s.adpCode ?? "—"}</td>
                     <td className="td max-w-[360px]">
                       <Link to={`/schemes/${s.id}`} className="text-white/90 hover:text-white hover:underline">
-                        {s.adpCode && <span className="mr-1.5 text-[11px] text-white/40">{s.adpCode}</span>}
                         {cleanName(s.name)}
                       </Link>
+                    </td>
+                    <td className="td whitespace-nowrap text-[12px]">{s.sector}</td>
+                    <td className="td whitespace-nowrap text-[12px]">
+                      {s.implementingAgency ? (
+                        <span className="rounded-md border border-white/20 bg-white/[0.06] px-1.5 py-0.5 text-[11px] text-white/80">
+                          {s.implementingAgency}
+                        </span>
+                      ) : (
+                        <span className="text-white/30">—</span>
+                      )}
                     </td>
                     <td className="td whitespace-nowrap text-right">{s.totalCost?.toLocaleString(undefined, { maximumFractionDigits: 1 }) ?? "—"}</td>
                     <td className="td whitespace-nowrap text-right">{s.adpAllocation?.toLocaleString(undefined, { maximumFractionDigits: 1 }) ?? "—"}</td>

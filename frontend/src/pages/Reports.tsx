@@ -17,6 +17,14 @@ interface AnalysisRow {
   lastReportDate: string | null;
   daysSilent: number | null;
 }
+interface Recon {
+  lastSync: string | null;
+  totals: { official: number; coded: number; matchedInPcfms: number; noCode: number };
+  sectors: { sector: string; ours: number; inPcfms: number; ourAlloc: number; pcfmsBudget: number }[];
+  missingInPcfms: { adpCode: string | null; name: string; sector: string; dept?: string }[];
+  moneyMismatches: { adpCode: string | null; name: string; ourAlloc: number | null; pcfmsBudget: number | null; diff: number }[];
+}
+
 interface Analysis {
   windowDays: number;
   windowWeeks?: number;
@@ -39,6 +47,7 @@ function fmtHour(h: number | null): string {
 export default function Reports() {
   const [d, setD] = useState<Dash | null>(null);
   const [an, setAn] = useState<Analysis | null>(null);
+  const [recon, setRecon] = useState<Recon | null>(null);
   const [err, setErr] = useState("");
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState("");
@@ -47,6 +56,7 @@ export default function Reports() {
   useEffect(() => {
     api.get<Dash>("/dashboard").then(setD).catch((e) => setErr((e as Error).message));
     api.get<Analysis>("/reports/analysis").then(setAn).catch(() => {});
+    api.get<Recon>("/reports/reconciliation").then(setRecon).catch(() => {});
   }, []);
 
   async function sendNow() {
@@ -254,11 +264,74 @@ export default function Reports() {
         </div>
       )}
 
+      {recon && (
+        <div className="card p-5">
+          <div className="mb-3 flex items-baseline justify-between">
+            <h2 className="text-sm uppercase tracking-widest text-white/95">Data Consistency — System vs P&amp;D</h2>
+            <span className="text-[11px] text-white/40">
+              {recon.lastSync ? `P&D synced ${new Date(recon.lastSync).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}` : "not yet synced"}
+            </span>
+          </div>
+          <p className="mb-4 text-[12px] text-white/50">
+            {recon.totals.official} official schemes · {recon.totals.coded} carry ADP codes · {recon.totals.matchedInPcfms} matched in the live P&amp;D system ·{" "}
+            {recon.totals.noCode} non-ADP items (KPCIP / policy) have no code to match.
+          </p>
+          <div className="scroll-thin overflow-x-auto">
+            <table className="w-full" style={{ minWidth: 640 }}>
+              <thead>
+                <tr className="border-b border-white/10">
+                  <th className="th">Sector</th>
+                  <th className="th !text-right">On System</th>
+                  <th className="th !text-right">In P&amp;D</th>
+                  <th className="th !text-right">Gap</th>
+                  <th className="th !text-right">Our Alloc (M)</th>
+                  <th className="th !text-right">P&amp;D Budget (M)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recon.sectors.map((s) => {
+                  const gap = s.ours - s.inPcfms;
+                  return (
+                    <tr key={s.sector} className="border-b border-white/[0.07] hover:bg-white/[0.04]">
+                      <td className="td text-[13px]">{s.sector}</td>
+                      <td className="td text-right tabular-nums">{s.ours}</td>
+                      <td className="td text-right tabular-nums">{s.inPcfms}</td>
+                      <td className="td text-right tabular-nums">
+                        {gap === 0 ? <span className="text-white/30">0</span> : <span className="text-white">{gap}</span>}
+                      </td>
+                      <td className="td text-right tabular-nums">{s.ourAlloc.toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>
+                      <td className="td text-right tabular-nums">{s.pcfmsBudget.toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {recon.missingInPcfms.length > 0 && (
+            <div className="mt-3 text-[12px] text-white/60">
+              <span className="text-white/85">Coded but not in live P&amp;D data:</span>{" "}
+              {recon.missingInPcfms.map((m) => `${m.adpCode} ${m.name}`).join(" · ")}
+            </div>
+          )}
+          {recon.moneyMismatches.length > 0 ? (
+            <div className="mt-2 text-[12px] text-white/60">
+              <span className="text-white/85">Money mismatches vs P&amp;D:</span>{" "}
+              {recon.moneyMismatches.slice(0, 6).map((m) => `${m.adpCode ?? "—"} (ours ${m.ourAlloc ?? "—"} vs P&D ${m.pcfmsBudget ?? "—"})`).join(" · ")}
+            </div>
+          ) : (
+            <div className="mt-2 text-[12px] text-white/40">Allocations match P&amp;D budgets on every matched scheme.</div>
+          )}
+        </div>
+      )}
+
       <div className="card p-5">
         <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-navy-900">Exports</h2>
         <div className="flex flex-wrap gap-3">
           <a href="/api/export/schemes.csv" download className="btn-ghost">
             ⬇ All schemes with latest progress (CSV)
+          </a>
+          <a href="/api/reports/schemes.pdf" download className="btn-ghost">
+            ⬇ Official schemes — one-page card sheet (PDF)
           </a>
         </div>
       </div>

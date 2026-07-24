@@ -1,51 +1,44 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { cleanName, api, Scheme, deptShort, fmtDate, fmtPct } from "../api";
+import { cleanName, api, Scheme, deptShort, fmtPct, fmtDate } from "../api";
 import { Heading, Spinner, ErrorBox, Bar, StageBadge, InitTag } from "../ui";
 
-interface SectorDetailData {
-  sector: string;
-  schemes: Scheme[];
-}
-
-export default function SectorDetail() {
+export default function ImplementationDetail() {
   const { name } = useParams();
-  const [d, setD] = useState<SectorDetailData | null>(null);
+  const [list, setList] = useState<Scheme[] | null>(null);
   const [err, setErr] = useState("");
 
   useEffect(() => {
-    if (!name) return;
-    api
-      .get<SectorDetailData>(`/sectors/${encodeURIComponent(name)}`)
-      .then(setD)
-      .catch((e) => setErr((e as Error).message));
-  }, [name]);
+    api.get<Scheme[]>("/schemes").then(setList).catch((e) => setErr((e as Error).message));
+  }, []);
 
   if (err) return <ErrorBox message={err} />;
-  if (!d) return <Spinner label="Loading sector…" />;
+  if (!list || !name) return <Spinner label="Loading…" />;
+
+  const agency = decodeURIComponent(name);
+  const schemes = list.filter((s) => (s.implementingAgency ?? "").trim() === agency);
 
   return (
     <div className="space-y-5">
       <Heading
-        title={`Sector — ${d.sector}`}
-        subtitle={`${d.schemes.length} scheme(s) · owning departments shown per row`}
+        title={`Implementation — ${agency}`}
         action={
-          <Link to="/sectors" className="btn-ghost">
-            ← All sectors
+          <Link to="/implementation" className="btn-ghost">
+            ← All agencies
           </Link>
         }
       />
 
       <div className="card overflow-hidden">
         <div className="scroll-thin overflow-x-auto">
-          <table className="w-full" style={{ minWidth: 1180 }}>
+          <table className="w-full" style={{ minWidth: 1220 }}>
             <thead>
               <tr className="border-b border-white/10">
                 <th className="th">Initiative</th>
                 <th className="th">Code</th>
                 <th className="th">Scheme</th>
+                <th className="th">Sector</th>
                 <th className="th">Department</th>
-                <th className="th">Implementation</th>
                 <th className="th !text-right">Cost (M)</th>
                 <th className="th !text-right">Alloc (M)</th>
                 <th className="th !text-right">Spent (M)</th>
@@ -55,18 +48,14 @@ export default function SectorDetail() {
               </tr>
             </thead>
             <tbody>
-              {d.schemes.map((s) => {
+              {schemes.map((s) => {
                 const u = s.updates?.[0];
                 const phys = s.effectivePhysical ?? u?.physicalProgressPct ?? null;
                 return (
                   <tr key={s.id} className="border-b border-white/[0.07] align-top hover:bg-white/[0.06]">
                     <td className="td whitespace-nowrap">
                       {s.initiative ? (
-                        <Link
-                          to={`/initiatives/${s.initiative.id}`}
-                          title={`#${s.initiative.number} ${s.initiative.shortName}`}
-                          className="inline-flex hover:opacity-70"
-                        >
+                        <Link to={`/initiatives/${s.initiative.id}`} title={`#${s.initiative.number} ${s.initiative.shortName}`} className="inline-flex hover:opacity-70">
                           <InitTag number={s.initiative.number} />
                         </Link>
                       ) : (
@@ -74,22 +63,14 @@ export default function SectorDetail() {
                       )}
                     </td>
                     <td className="td whitespace-nowrap text-[12px] tabular-nums text-white/50">{s.adpCode ?? "—"}</td>
-                    <td className="td max-w-[360px]">
+                    <td className="td max-w-[420px]">
                       <Link to={`/schemes/${s.id}`} className="text-white/90 hover:text-white hover:underline">
                         {cleanName(s.name)}
                       </Link>
                     </td>
+                    <td className="td whitespace-nowrap text-[12px]">{s.sector}</td>
                     <td className="td whitespace-nowrap text-[12px]" title={s.department?.name}>
                       {deptShort(s.department)}
-                    </td>
-                    <td className="td whitespace-nowrap text-[12px]">
-                      {s.implementingAgency ? (
-                        <span className="rounded-md border border-white/20 bg-white/[0.06] px-1.5 py-0.5 text-[11px] text-white/80">
-                          {s.implementingAgency}
-                        </span>
-                      ) : (
-                        <span className="text-white/30">—</span>
-                      )}
                     </td>
                     <td className="td whitespace-nowrap text-right tabular-nums">{s.totalCost?.toLocaleString(undefined, { maximumFractionDigits: 1 }) ?? "—"}</td>
                     <td className="td whitespace-nowrap text-right tabular-nums">{s.adpAllocation?.toLocaleString(undefined, { maximumFractionDigits: 1 }) ?? "—"}</td>

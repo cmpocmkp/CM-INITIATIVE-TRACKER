@@ -27,6 +27,7 @@ export default function Layout() {
         { to: "/prp", label: "Peshawar Revitalization" },
         { to: "/sectors", label: "Sector" },
         { to: "/departments", label: "Department" },
+        { to: "/implementation", label: "Implementation" },
         { to: "/reports", label: "Reports" },
         ...(user.role === "SUPERADMIN" ? [{ to: "/admin", label: "Admin" }] : []),
       ]
