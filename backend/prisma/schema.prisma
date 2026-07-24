@@ -134,6 +134,7 @@ model Scheme {
   isPRP         Boolean     @default(false)
   isPlaceholder Boolean     @default(false)
   isOfficial    Boolean     @default(false) // in the official 112-scheme universe (86 list + PRP program)
+  implementingAgency String? // executing agency responsible for implementation (PDA, WSSP, CMGP, PKHA …)
   stage         SchemeStage @default(NOT_STARTED) // lifecycle (PC-1 etc.), changed rarely
 
   departmentId  String

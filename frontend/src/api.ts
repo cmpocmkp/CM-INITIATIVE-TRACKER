@@ -111,6 +111,7 @@ export interface Scheme {
   adpAllocation: number | null;
   isPRP: boolean;
   isOfficial?: boolean;
+  implementingAgency?: string | null;
   isPlaceholder: boolean;
   stage: Stage;
   department: DeptRef;
@@ -209,6 +210,7 @@ export interface SheetRow {
   allocation: number | null;
   isPRP: boolean;
   isOfficial?: boolean;
+  implementingAgency?: string | null;
   hasSubs: boolean;
   /** Initiative rows only: has schemes attached → row is auto-computed, not typed. */
   hasSchemes?: boolean;

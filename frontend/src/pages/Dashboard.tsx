@@ -75,7 +75,7 @@ export default function Dashboard() {
               title={`${i.name} — ${deptShort(i.leadDepartment)} · ${i.schemes} scheme${i.schemes === 1 ? "" : "s"}`}
             >
               <NumBox n={i.number} size={22} />
-              <span className="min-w-0 flex-1 truncate text-[13px] text-white/60 transition-colors group-hover:text-white">
+              <span className="min-w-0 flex-1 truncate text-[13px] text-white/90 transition-colors group-hover:text-white">
                 {i.shortName}
               </span>
               <span
@@ -88,7 +88,7 @@ export default function Dashboard() {
               <span className="h-[3px] w-24 shrink-0 overflow-hidden rounded-full bg-white/10 sm:w-32">
                 <span className="block h-full bg-white/85" style={{ width: `${Math.min(100, i.avgPhysical || 0)}%` }} />
               </span>
-              <span className="w-11 shrink-0 text-right text-[12px] tabular-nums text-white/85">{fmtPct(i.avgPhysical)}</span>
+              <span className="w-11 shrink-0 text-right text-[12px] tabular-nums text-white">{fmtPct(i.avgPhysical)}</span>
             </Link>
           ))}
         </div>
@@ -96,19 +96,41 @@ export default function Dashboard() {
 
       {/* Sites needing attention */}
       {d.attention.length > 0 && (
-        <div className="card border-l-4 border-l-white/70 p-5">
-          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-white/95">
-            ⚠ Sites Halted / Slow — needs attention
-          </h2>
-          <div className="space-y-2">
+        <div className="card p-6">
+          <div className="mb-2 flex items-baseline justify-between">
+            <h2 className="text-sm uppercase tracking-widest text-white/95">Needs Attention</h2>
+            <span className="text-[11px] text-white/40">
+              {d.attention.filter((a) => a.status === "HALTED").length} halted ·{" "}
+              {d.attention.filter((a) => a.status !== "HALTED").length} slow
+            </span>
+          </div>
+          <div>
             {d.attention.map((a, i) => (
-              <Link key={i} to={`/schemes/${a.schemeId}`} className="flex flex-wrap items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-[13px] hover:border-white/30">
-                <span className={a.status === "HALTED" ? "badge border-white bg-white text-black" : "badge border-white/30 bg-white/10 text-white/80"}>
-                  {a.status}
-                </span>
-                <span className="font-bold text-navy-800">{a.dept}</span>
-                <span className="flex-1 truncate text-white/75">{a.name}</span>
-                {a.note && <span className="text-[12px] italic text-white/95">{a.note}</span>}
+              <Link
+                key={i}
+                to={`/schemes/${a.schemeId}`}
+                className="group block border-b border-white/[0.07] py-3 transition last:border-0 hover:bg-white/[0.04]"
+              >
+                <div className="flex items-center gap-3">
+                  <span
+                    className={
+                      a.status === "HALTED"
+                        ? "w-16 shrink-0 rounded-md bg-white py-0.5 text-center text-[10px] font-medium tracking-wide text-black"
+                        : "w-16 shrink-0 rounded-md border border-white/25 py-0.5 text-center text-[10px] tracking-wide text-white/70"
+                    }
+                  >
+                    {a.status}
+                  </span>
+                  <span className="w-16 shrink-0 text-[11px] tracking-wide text-white/40">{a.dept}</span>
+                  <span className="min-w-0 flex-1 truncate text-[13px] text-white/90 transition-colors group-hover:text-white">
+                    {a.name}
+                  </span>
+                </div>
+                {a.note && (
+                  <p className="mt-1 pl-[152px] text-[12px] leading-relaxed text-white/45" style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                    {a.note}
+                  </p>
+                )}
               </Link>
             ))}
           </div>

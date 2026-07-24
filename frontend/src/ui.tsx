@@ -72,7 +72,7 @@ export function Delta({ value }: { value: string | null }) {
 export function NumBox({ n, size = 30 }: { n: number; size?: number }) {
   return (
     <span
-      className="inline-flex shrink-0 items-center justify-center border border-white/20 bg-transparent leading-none text-white/90"
+      className="inline-flex shrink-0 items-center justify-center border border-white/25 bg-transparent leading-none text-white"
       style={{
         width: size,
         height: size,

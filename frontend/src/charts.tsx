@@ -20,13 +20,13 @@ export const NAVY = ["#f5f5f5", "#cfcfcf", "#a8a8a8", "#828282", "#5f5f5f", "#42
 
 const tooltipStyle = {
   borderRadius: 12,
-  border: "1px solid rgba(255,255,255,0.15)",
-  background: "rgba(36,38,43,0.94)",
-  color: "#f5f5f5",
-  backdropFilter: "blur(10px)",
+  border: "1px solid rgba(255,255,255,0.9)",
+  background: "rgba(255,255,255,0.97)",
+  color: "#16181c",
   fontSize: 12,
-  boxShadow: "0 12px 32px rgba(0,0,0,0.5)",
+  boxShadow: "0 12px 32px rgba(0,0,0,0.45)",
 };
+const tooltipItemStyle = { color: "#16181c" };
 
 export function SectorBars({
   data,
@@ -48,6 +48,8 @@ export function SectorBars({
         <YAxis tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }} tickFormatter={(v) => (v >= 1000 ? `${v / 1000}B` : `${v}M`)} />
         <Tooltip
           contentStyle={tooltipStyle}
+          itemStyle={tooltipItemStyle}
+          labelStyle={tooltipItemStyle}
           formatter={(v: number, name: string) => [
             v >= 1000 ? `Rs ${(v / 1000).toFixed(2)} Bn` : `Rs ${v.toFixed(0)} M`,
             name === "alloc" ? "ADP Allocation" : "Expenditure",
@@ -64,21 +66,49 @@ export function SectorBars({
   );
 }
 
+/**
+ * Lifecycle is an ORDERED progression, so the donut uses a fixed ordinal ramp:
+ * brightness = progress (Not Started dimmest → Completed white). Each stage
+ * always gets ITS shade regardless of which stages are present; On Hold is a
+ * state, not a stage, so it renders as a dashed outline instead of a ramp step.
+ */
+const STAGE_ORDER: Stage[] = ["NOT_STARTED", "FEASIBILITY", "PC1_APPROVAL", "TENDERING", "EXECUTION", "COMPLETED", "ON_HOLD"];
+const STAGE_FILL: Record<Stage, string> = {
+  NOT_STARTED: "rgba(255,255,255,0.12)",
+  FEASIBILITY: "rgba(255,255,255,0.26)",
+  PC1_APPROVAL: "rgba(255,255,255,0.42)",
+  TENDERING: "rgba(255,255,255,0.58)",
+  EXECUTION: "rgba(255,255,255,0.76)",
+  COMPLETED: "rgba(255,255,255,0.97)",
+  ON_HOLD: "rgba(255,255,255,0.08)",
+};
+
 export function StageDonut({ dist }: { dist: Record<string, number> }) {
-  const data = Object.entries(dist)
-    .filter(([, v]) => v > 0)
-    .map(([k, v]) => ({ name: stageLabel(k as Stage), value: v }));
+  const data = STAGE_ORDER.filter((k) => (dist[k] ?? 0) > 0).map((k) => ({
+    key: k,
+    name: stageLabel(k),
+    value: dist[k],
+  }));
   if (!data.length) return <div className="p-8 text-center text-sm text-white/40">No stage data yet</div>;
   return (
     <ResponsiveContainer width="100%" height={280}>
       <PieChart>
-        <Pie data={data} dataKey="value" nameKey="name" innerRadius={60} outerRadius={95} paddingAngle={2}>
-          {data.map((_, i) => (
-            <Cell key={i} fill={NAVY[i % NAVY.length]} stroke="rgba(0,0,0,0.4)" />
+        <Pie data={data} dataKey="value" nameKey="name" innerRadius={60} outerRadius={95} paddingAngle={1}>
+          {data.map((d) => (
+            <Cell
+              key={d.key}
+              fill={STAGE_FILL[d.key]}
+              stroke={d.key === "ON_HOLD" ? "rgba(255,255,255,0.55)" : "#1d2024"}
+              strokeWidth={2}
+              strokeDasharray={d.key === "ON_HOLD" ? "4 3" : undefined}
+            />
           ))}
         </Pie>
-        <Tooltip contentStyle={tooltipStyle} />
-        <Legend wrapperStyle={{ fontSize: 12, color: "rgba(255,255,255,0.6)" }} />
+        <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} labelStyle={tooltipItemStyle} formatter={(v: number, n: string) => [`${v} scheme${v === 1 ? "" : "s"}`, n]} />
+        <Legend
+          wrapperStyle={{ fontSize: 12 }}
+          formatter={(value) => <span style={{ color: "rgba(255,255,255,0.65)" }}>{value}</span>}
+        />
       </PieChart>
     </ResponsiveContainer>
   );
@@ -97,7 +127,7 @@ export function TrendLine({
         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" vertical={false} />
         <XAxis dataKey="date" tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }} />
         <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }} tickFormatter={(v) => `${v}%`} />
-        <Tooltip contentStyle={tooltipStyle} formatter={(v: number, n: string) => [`${Math.round(v)}%`, n === "physical" ? "Physical" : "Financial"]} />
+        <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} labelStyle={tooltipItemStyle} formatter={(v: number, n: string) => [`${Math.round(v)}%`, n === "physical" ? "Physical" : "Financial"]} />
         <Legend wrapperStyle={{ fontSize: 12, color: "rgba(255,255,255,0.6)" }} formatter={(v) => (v === "physical" ? "Physical %" : "Financial %")} />
         <Line type="monotone" dataKey="physical" stroke="rgba(255,255,255,0.9)" strokeWidth={2.5} dot={{ r: 2 }} connectNulls />
         <Line type="monotone" dataKey="financial" stroke="rgba(255,255,255,0.4)" strokeWidth={2} dot={{ r: 2 }} connectNulls />

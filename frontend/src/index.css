@@ -6,12 +6,39 @@ body {
   /* Deep charcoal with soft smoky light wisps behind the glass panels */
   @apply bg-[#1d2024] text-white/85 antialiased;
   background-image:
-    radial-gradient(900px 460px at 80% -8%, rgba(255, 255, 255, 0.20), transparent 58%),
-    radial-gradient(700px 420px at -8% 28%, rgba(255, 255, 255, 0.13), transparent 55%),
-    radial-gradient(560px 380px at 48% 112%, rgba(255, 255, 255, 0.15), transparent 58%),
-    radial-gradient(420px 300px at 30% 55%, rgba(255, 255, 255, 0.07), transparent 60%),
-    linear-gradient(160deg, #2b2e34 0%, #1d2024 48%, #262a31 100%);
+    radial-gradient(900px 460px at 80% -8%, rgba(255, 255, 255, 0.22), transparent 58%),
+    radial-gradient(700px 420px at -8% 28%, rgba(255, 255, 255, 0.15), transparent 55%),
+    radial-gradient(560px 380px at 48% 112%, rgba(255, 255, 255, 0.17), transparent 58%),
+    radial-gradient(420px 300px at 30% 55%, rgba(255, 255, 255, 0.09), transparent 60%),
+    linear-gradient(160deg, #2e3138 0%, #1d2024 48%, #292d35 100%);
   background-attachment: fixed;
+}
+
+/* Fixed light orbs — luminosity at card scale so backdrop-blur has something
+   visible to frost. They sit behind all content (z -1) but above the body fill,
+   so every glass panel picks up soft bright patches through its blur. */
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  border-radius: 9999px;
+  pointer-events: none;
+  filter: blur(90px);
+}
+body::before {
+  width: 620px;
+  height: 620px;
+  left: -140px;
+  top: 16%;
+  background: rgba(255, 255, 255, 0.15);
+}
+body::after {
+  width: 780px;
+  height: 780px;
+  right: -180px;
+  top: -220px;
+  background: rgba(255, 255, 255, 0.19);
 }
 
 /* Thin typography app-wide: neutralize bold utilities (max emphasis = medium). */
@@ -29,11 +56,12 @@ strong {
 
 @layer components {
   .card {
-    @apply rounded-3xl border border-white/[0.14] backdrop-blur-2xl;
-    background: linear-gradient(165deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.05) 55%, rgba(255, 255, 255, 0.08) 100%);
+    @apply rounded-3xl border border-white/[0.16] backdrop-blur-2xl;
+    /* Thin fill — the frosted backdrop (orbs + wisps) does the work */
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.02) 55%, rgba(255, 255, 255, 0.05) 100%);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.14),
-      inset 0 0 0 0.5px rgba(255, 255, 255, 0.04),
+      inset 0 1px 0 rgba(255, 255, 255, 0.16),
+      inset 0 0 0 0.5px rgba(255, 255, 255, 0.05),
       0 18px 44px rgba(0, 0, 0, 0.30);
   }
   .btn {

@@ -24,6 +24,7 @@ export default function Layout() {
         { to: "/", label: "Overview" },
         { to: "/initiatives", label: "21 Initiatives +" },
         { to: "/schemes", label: "All Schemes" },
+        { to: "/prp", label: "Peshawar Revitalization" },
         { to: "/sectors", label: "Sector" },
         { to: "/departments", label: "Department" },
         { to: "/reports", label: "Reports" },

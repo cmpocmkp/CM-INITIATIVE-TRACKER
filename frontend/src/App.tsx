@@ -13,6 +13,7 @@ import Schemes from "./pages/Schemes";
 import SchemeDetail from "./pages/SchemeDetail";
 import Entry from "./pages/Entry";
 import Reports from "./pages/Reports";
+import PRP from "./pages/PRP";
 import Admin from "./pages/Admin";
 import { Spinner } from "./ui";
 
@@ -43,6 +44,7 @@ export default function App() {
             <Route path="/departments/:id" element={<DepartmentDetail />} />
             <Route path="/sectors" element={<Sectors />} />
             <Route path="/sectors/:name" element={<SectorDetail />} />
+            <Route path="/prp" element={<PRP />} />
             <Route path="/schemes" element={<Schemes />} />
             <Route path="/schemes/:id" element={<SchemeDetail />} />
             <Route path="/entry" element={<Entry />} />
