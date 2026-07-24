@@ -72,13 +72,14 @@ export function Delta({ value }: { value: string | null }) {
 export function NumBox({ n, size = 30 }: { n: number; size?: number }) {
   return (
     <span
-      className="inline-flex shrink-0 items-center justify-center border border-white/30 bg-transparent font-light leading-none text-white/95"
+      className="inline-flex shrink-0 items-center justify-center border border-white/20 bg-transparent leading-none text-white/90"
       style={{
         width: size,
         height: size,
         borderRadius: Math.max(4, Math.round(size * 0.22)),
         fontSize: Math.round(size * 0.72),
-        fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+        fontWeight: 200,
+        fontFamily: "'Segoe UI Light', 'Helvetica Neue', 'Segoe UI', Helvetica, Arial, sans-serif",
       }}
     >
       {n}
