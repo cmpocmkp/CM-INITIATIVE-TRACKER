@@ -176,7 +176,7 @@ export class DigestService {
             })
           : await this.whatsapp.send(
               p.phone as string,
-              `*CM Initiative Tracker — ${label}*\n\nDear ${p.name},\n\nToday's progress entry for your ${p._count.schemes} priority scheme(s) is still pending.${finalLine}\n\nFill your daily sheet:\n${appUrl}/entry\n\nSign in with your department code *${p.code}*.\n\n— Chief Minister's Policy Office (CMPO)`,
+              `*CM Initiative Tracker — ${label}*\n\nDear ${p.name},\n\nToday's progress entry for your ${p._count.schemes} priority scheme(s) is still pending.${finalLine}\n\nFill your daily sheet:\n${appUrl}/entry\n\nSign in with your department code *${p.code}*.\n\n— Chief Minister Policy Office (CMPO)`,
             );
         if (r.ok) waSent.push(p.code);
       }
@@ -236,7 +236,7 @@ export class DigestService {
         if (!dept.phone) continue;
         const r = await this.whatsapp.send(
           dept.phone,
-          `*CM Initiative Tracker* — Government of Khyber Pakhtunkhwa\n\nDear ${dept.name},\n\nThe Chief Minister's Office is tracking daily progress of CM priority schemes. Your department has *${dept._count.schemes} scheme(s)* on the platform.\n\n🌐 ${appUrl}\n👤 Username: *${dept.code}*\n🔑 Password: *${defaultPwd}* (change after first login)\n\nEvery day, open Daily Data Entry and fill: current phase, % complete, work done today, manpower & machinery, site status, and any issues.\n\n— Chief Minister's Policy Office (CMPO)`,
+          `*CM Initiative Tracker* — Government of Khyber Pakhtunkhwa\n\nDear ${dept.name},\n\nThe Chief Minister's Office is tracking daily progress of CM priority schemes. Your department has *${dept._count.schemes} scheme(s)* on the platform.\n\n🌐 ${appUrl}\n👤 Username: *${dept.code}*\n🔑 Password: *${defaultPwd}* (change after first login)\n\nEvery day, open Daily Data Entry and fill: current phase, % complete, work done today, manpower & machinery, site status, and any issues.\n\n— Chief Minister Policy Office (CMPO)`,
         );
         if (r.ok) waSent.push(dept.code);
       }
@@ -420,7 +420,7 @@ export class DigestService {
       </div>
     </div>
     <div style="padding:12px 24px;background:#f8fafc;border-top:1px solid #e5eaf0;font-size:11px;color:#94a3b8;text-align:center;">
-      Chief Minister's Policy Office (CMPO) · Government of Khyber Pakhtunkhwa
+      Chief Minister Policy Office (CMPO) · Government of Khyber Pakhtunkhwa
     </div>
   </div>
 </div>`;

@@ -38,7 +38,7 @@ export default function Logo({
     >
       <img
         src="/cmpo-logo.png"
-        alt="CMPO — Chief Minister's Policy Office"
+        alt="CMPO — Chief Minister Policy Office"
         className="h-full w-full object-contain"
         onError={() => setMissing(true)}
       />

@@ -105,7 +105,7 @@ export default function Layout() {
       </button>
       {!isCollapsed && (
         <div className="border-t border-neutral-100 px-5 py-3 text-[11px] leading-relaxed text-neutral-400">
-          Chief Minister&apos;s Policy Office
+          Chief Minister Policy Office
           <br />
           CMPO · Daily Progress Tracking
         </div>

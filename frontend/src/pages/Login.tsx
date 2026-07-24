@@ -80,7 +80,7 @@ export default function Login() {
         </div>
 
         <p className="mt-5 text-center text-[11px] text-slate-400">
-          Chief Minister&apos;s Policy Office (CMPO) · Government of Khyber Pakhtunkhwa
+          Chief Minister Policy Office (CMPO) · Government of Khyber Pakhtunkhwa
         </p>
       </div>
     </div>

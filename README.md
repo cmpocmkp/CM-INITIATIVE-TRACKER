@@ -3,7 +3,7 @@
 **Khyber Pakhtunkhwa — Chief Minister's Priority Initiatives & Sector Tracking Platform**
 Data collection + visualization for the CM's **21 focus initiatives** and **86 ADP priority schemes**, reported **daily** by **34 departments**.
 
-Built by CMPO (Chief Minister's Policy Office).
+Built by CMPO (Chief Minister Policy Office).
 
 ---
 
