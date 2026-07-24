@@ -38,10 +38,10 @@ export default function InitiativeDetail() {
   return (
     <div className="space-y-6">
       <div className="card overflow-hidden">
-        <div className="border-b-4 border-navy-500 bg-white px-6 py-5">
+        <div className="border-b border-white/10 bg-white/[0.05] px-6 py-5">
           <div className="flex items-center gap-3">
             <span
-              className="inline-flex h-11 w-11 shrink-0 items-center justify-center border border-neutral-300 bg-transparent text-[32px] font-light leading-none text-neutral-900"
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center border border-white/15 bg-transparent text-[32px] font-light leading-none text-white/95"
               style={{ fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif" }}
             >
               {i.number}
@@ -59,7 +59,7 @@ export default function InitiativeDetail() {
               ["Alloc / Spent", `${fmtM(alloc)} · ${fmtM(spent)}`],
             ].map(([l, v]) => (
               <div key={l}>
-                <div className="text-[10px] uppercase tracking-wider text-slate-400">{l}</div>
+                <div className="text-[10px] uppercase tracking-wider text-white/40">{l}</div>
                 <div className="mt-0.5 text-[13px] font-semibold text-navy-900">{v}</div>
               </div>
             ))}
@@ -73,7 +73,7 @@ export default function InitiativeDetail() {
       </div>
 
       <div className="card overflow-hidden">
-        <div className="border-b border-slate-200 px-5 py-3">
+        <div className="border-b border-white/10 px-5 py-3">
           <h2 className="text-sm font-bold uppercase tracking-wide text-navy-900">Schemes under this Initiative</h2>
         </div>
         {i.schemes.length === 0 ? (
@@ -82,7 +82,7 @@ export default function InitiativeDetail() {
           <div className="scroll-thin overflow-x-auto">
             <table className="w-full" style={{ minWidth: 900 }}>
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50">
+                <tr className="border-b border-white/10 bg-white/[0.04]">
                   <th className="th">Scheme</th>
                   <th className="th">Dept</th>
                   <th className="th !text-right">Cost (M)</th>
@@ -98,10 +98,10 @@ export default function InitiativeDetail() {
                   const u = s.updates?.[0];
                   const phys = s.effectivePhysical ?? u?.physicalProgressPct ?? null;
                   return (
-                    <tr key={s.id} className="border-b border-slate-100 hover:bg-navy-50/40">
+                    <tr key={s.id} className="border-b border-white/[0.07] hover:bg-white/[0.06]">
                       <td className="td max-w-[380px]">
                         <Link to={`/schemes/${s.id}`} className="font-medium text-navy-800 hover:text-navy-600">
-                          {s.adpCode && <span className="mr-1.5 text-[11px] text-slate-400">{s.adpCode}</span>}
+                          {s.adpCode && <span className="mr-1.5 text-[11px] text-white/40">{s.adpCode}</span>}
                           {s.name}
                         </Link>
                       </td>
@@ -118,7 +118,7 @@ export default function InitiativeDetail() {
                       <td className="td">
                         <StageBadge stage={s.stage} />
                       </td>
-                      <td className="td whitespace-nowrap text-[12px] text-slate-500">{fmtDate(u?.reportDate)}</td>
+                      <td className="td whitespace-nowrap text-[12px] text-white/50">{fmtDate(u?.reportDate)}</td>
                     </tr>
                   );
                 })}
@@ -135,17 +135,17 @@ export default function InitiativeDetail() {
           </h2>
           <div className="space-y-3">
             {i.updates.slice(0, 10).map((u) => (
-              <div key={u.id} className="rounded-lg border border-slate-200 p-3">
-                <div className="flex flex-wrap items-center justify-between gap-2 text-[12px] text-slate-500">
+              <div key={u.id} className="rounded-lg border border-white/10 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[12px] text-white/50">
                   <span className="font-semibold text-navy-800">{fmtDate(u.reportDate)}</span>
                   <span className="flex items-center gap-2">
-                    {u.phase && <span className="text-slate-600">{u.phase}</span>}
+                    {u.phase && <span className="text-white/60">{u.phase}</span>}
                     phys {fmtPct(u.physicalProgressPct)} <SiteBadge status={u.siteStatus} />
                   </span>
                 </div>
-                {u.narrative && <p className="mt-1.5 text-[13px] text-slate-700">{u.narrative}</p>}
+                {u.narrative && <p className="mt-1.5 text-[13px] text-white/75">{u.narrative}</p>}
                 {u.bottlenecks && (
-                  <p className="mt-1 text-[12px] text-neutral-900">
+                  <p className="mt-1 text-[12px] text-white/95">
                     <b>Bottleneck:</b> {u.bottlenecks}
                   </p>
                 )}

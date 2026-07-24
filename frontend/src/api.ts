@@ -110,6 +110,7 @@ export interface Scheme {
   totalCost: number | null;
   adpAllocation: number | null;
   isPRP: boolean;
+  isOfficial?: boolean;
   isPlaceholder: boolean;
   stage: Stage;
   department: DeptRef;
@@ -132,6 +133,7 @@ export interface Initiative {
 }
 
 export interface Totals {
+  officialCount?: number;
   count: number;
   totalCost: number;
   totalAlloc: number;
@@ -206,6 +208,7 @@ export interface SheetRow {
   adpCode: string | null;
   allocation: number | null;
   isPRP: boolean;
+  isOfficial?: boolean;
   hasSubs: boolean;
   /** Initiative rows only: has schemes attached → row is auto-computed, not typed. */
   hasSchemes?: boolean;

@@ -41,7 +41,7 @@ export default function Departments() {
         <div className="scroll-thin overflow-x-auto">
           <table className="w-full" style={{ minWidth: 640 }}>
             <thead>
-              <tr className="border-b border-neutral-200">
+              <tr className="border-b border-white/10">
                 <th className="th">Code</th>
                 <th className="th">Department</th>
                 <th className="th !text-right">Schemes</th>
@@ -53,18 +53,18 @@ export default function Departments() {
               {filtered.map((d) => (
                 <tr
                   key={d.id}
-                  className="cursor-pointer border-b border-neutral-100 hover:bg-neutral-50"
+                  className="cursor-pointer border-b border-white/[0.07] hover:bg-white/[0.06]"
                   onClick={() => navigate(`/departments/${d.id}`)}
                 >
-                  <td className="td whitespace-nowrap text-[12px] text-neutral-500">{d.code}</td>
+                  <td className="td whitespace-nowrap text-[12px] text-white/50">{d.code}</td>
                   <td className="td">
-                    <Link to={`/departments/${d.id}`} className="text-neutral-900 hover:underline">
+                    <Link to={`/departments/${d.id}`} className="text-white/95 hover:underline">
                       {d.name}
                     </Link>
                   </td>
                   <td className="td text-right tabular-nums">{d._count.schemes || "—"}</td>
                   <td className="td text-right tabular-nums">{d._count.ledInitiatives || "—"}</td>
-                  <td className="td text-[12px] text-neutral-400">{d.isSector ? "✓" : "non-ADP"}</td>
+                  <td className="td text-[12px] text-white/40">{d.isSector ? "✓" : "non-ADP"}</td>
                 </tr>
               ))}
             </tbody>

@@ -65,13 +65,13 @@ export default function Initiatives() {
         {list.map((i) => {
           const r = roll(i);
           return (
-            <Link key={i.id} to={`/initiatives/${i.id}`} className="card group p-4 transition hover:border-navy-300 hover:shadow-md">
-              <h3 className="flex items-center gap-2.5 text-[14px] leading-snug text-neutral-900" title={i.name}>
+            <Link key={i.id} to={`/initiatives/${i.id}`} className="card group p-4 transition hover:border-white/30 hover:shadow-md">
+              <h3 className="flex items-center gap-2.5 text-[14px] leading-snug text-white/95" title={i.name}>
                 <NumBox n={i.number} size={30} />
                 <span className="min-w-0 truncate">{i.shortName}</span>
               </h3>
-              <div className="mt-1 truncate text-[11px] text-slate-500" title={i.leadDepartment?.name ?? ""}>
-                Lead: <span className="font-semibold text-slate-700">{deptShort(i.leadDepartment)}</span>
+              <div className="mt-1 truncate text-[11px] text-white/50" title={i.leadDepartment?.name ?? ""}>
+                Lead: <span className="font-semibold text-white/75">{deptShort(i.leadDepartment)}</span>
               </div>
 
               <div className="mt-2.5 flex items-center gap-2">
@@ -79,17 +79,17 @@ export default function Initiatives() {
                 <div className="text-[13px] font-bold text-navy-800">{fmtPct(r.phys)}</div>
               </div>
 
-              <div className="mt-2.5 grid grid-cols-3 gap-1 border-t border-slate-100 pt-2 text-center">
+              <div className="mt-2.5 grid grid-cols-3 gap-1 border-t border-white/[0.07] pt-2 text-center">
                 <div>
-                  <div className="text-[9px] uppercase tracking-wide text-slate-400">Schemes</div>
+                  <div className="text-[9px] uppercase tracking-wide text-white/40">Schemes</div>
                   <div className="text-[12px] font-bold text-navy-900">{i.schemes.length}</div>
                 </div>
                 <div>
-                  <div className="text-[9px] uppercase tracking-wide text-slate-400">Allocation</div>
+                  <div className="text-[9px] uppercase tracking-wide text-white/40">Allocation</div>
                   <div className="text-[12px] font-bold text-navy-900">{fmtM(r.alloc)}</div>
                 </div>
                 <div>
-                  <div className="text-[9px] uppercase tracking-wide text-slate-400">Spent</div>
+                  <div className="text-[9px] uppercase tracking-wide text-white/40">Spent</div>
                   <div className="text-[12px] font-bold text-navy-900">{fmtM(r.spent)}</div>
                 </div>
               </div>

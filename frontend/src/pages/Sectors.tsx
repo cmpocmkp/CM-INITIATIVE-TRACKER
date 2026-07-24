@@ -32,21 +32,21 @@ export default function Sectors() {
         <div className="scroll-thin overflow-x-auto">
           <table className="w-full" style={{ minWidth: 860 }}>
             <thead>
-              <tr className="border-b border-neutral-200">
+              <tr className="border-b border-white/10">
                 <th className="th">Sector</th>
                 <th className="th !text-right">Schemes</th>
                 <th className="th !text-right">Cost (M)</th>
                 <th className="th !text-right">Allocation (M)</th>
                 <th className="th !text-right">Spent (M)</th>
                 <th className="th" style={{ minWidth: 170 }}>Physical</th>
-                <th className="th !text-right">Updated Today</th>
+                <th className="th !text-right">Updated This Week</th>
               </tr>
             </thead>
             <tbody>
               {list.map((r) => (
-                <tr key={r.sector} className="border-b border-neutral-100 hover:bg-neutral-50">
+                <tr key={r.sector} className="border-b border-white/[0.07] hover:bg-white/[0.06]">
                   <td className="td">
-                    <Link to={`/sectors/${encodeURIComponent(r.sector)}`} className="text-neutral-900 hover:underline">
+                    <Link to={`/sectors/${encodeURIComponent(r.sector)}`} className="text-white/95 hover:underline">
                       {r.sector}
                     </Link>
                   </td>
@@ -56,13 +56,13 @@ export default function Sectors() {
                   <td className="td text-right tabular-nums">{r.spent ? r.spent.toLocaleString(undefined, { maximumFractionDigits: 0 }) : "—"}</td>
                   <td className="td">
                     <div className="flex items-center gap-2">
-                      <span className="h-[3px] w-28 overflow-hidden rounded-full bg-neutral-100">
-                        <span className="block h-full bg-neutral-800" style={{ width: `${Math.min(100, r.avgPhysical)}%` }} />
+                      <span className="h-[3px] w-28 overflow-hidden rounded-full bg-white/10">
+                        <span className="block h-full bg-white/85" style={{ width: `${Math.min(100, r.avgPhysical)}%` }} />
                       </span>
-                      <span className="text-[12px] tabular-nums text-neutral-700">{fmtPct(r.avgPhysical)}</span>
+                      <span className="text-[12px] tabular-nums text-white/75">{fmtPct(r.avgPhysical)}</span>
                     </div>
                   </td>
-                  <td className="td text-right tabular-nums text-neutral-500">
+                  <td className="td text-right tabular-nums text-white/50">
                     {r.updatedToday}/{r.count}
                   </td>
                 </tr>
@@ -70,7 +70,7 @@ export default function Sectors() {
             </tbody>
           </table>
         </div>
-        <div className="border-t border-neutral-100 px-4 py-2 text-[11px] text-neutral-400">
+        <div className="border-t border-white/[0.07] px-4 py-2 text-[11px] text-white/40">
           {list.length} sectors · total allocation {fmtM(list.reduce((a, r) => a + r.alloc, 0))}
         </div>
       </div>

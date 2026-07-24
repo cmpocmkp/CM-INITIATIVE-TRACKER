@@ -133,6 +133,7 @@ model Scheme {
   adpAllocation Float? // Rs. in millions (current FY allocation)
   isPRP         Boolean     @default(false)
   isPlaceholder Boolean     @default(false)
+  isOfficial    Boolean     @default(false) // in the official 112-scheme universe (86 list + PRP program)
   stage         SchemeStage @default(NOT_STARTED) // lifecycle (PC-1 etc.), changed rarely
 
   departmentId  String

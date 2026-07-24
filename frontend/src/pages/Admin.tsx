@@ -156,26 +156,26 @@ export default function Admin() {
 
       {/* Correction requests (daily-lock workflow) */}
       {corrections.filter((c) => c.status === "PENDING").length > 0 && (
-        <div className="card overflow-hidden border-l-4 border-l-neutral-800">
-          <div className="border-b border-slate-200 px-5 py-3">
-            <h2 className="text-sm uppercase tracking-wide text-neutral-900">
+        <div className="card overflow-hidden border-l-4 border-l-white/70">
+          <div className="border-b border-white/10 px-5 py-3">
+            <h2 className="text-sm uppercase tracking-wide text-white/95">
               Correction Requests — pending {corrections.filter((c) => c.status === "PENDING").length}
             </h2>
-            <p className="mt-0.5 text-[12px] text-neutral-500">
+            <p className="mt-0.5 text-[12px] text-white/50">
               Submitted daily entries are locked. Approving lets the department edit &amp; re-save that entry once.
             </p>
           </div>
-          <div className="divide-y divide-neutral-100">
+          <div className="divide-y divide-white/[0.07]">
             {corrections
               .filter((c) => c.status === "PENDING")
               .map((c) => (
                 <div key={c.id} className="flex flex-wrap items-center gap-3 px-5 py-3">
-                  <span className="text-[13px] text-neutral-900">{c.department.code}</span>
-                  <span className="min-w-0 flex-1 truncate text-[13px] text-neutral-600" title={c.entityName}>
+                  <span className="text-[13px] text-white/95">{c.department.code}</span>
+                  <span className="min-w-0 flex-1 truncate text-[13px] text-white/60" title={c.entityName}>
                     {c.entityName}
                   </span>
-                  <span className="text-[11px] text-neutral-400">{fmtDate(c.reportDate)}</span>
-                  <span className="max-w-[260px] truncate text-[12px] italic text-neutral-500" title={c.reason}>
+                  <span className="text-[11px] text-white/40">{fmtDate(c.reportDate)}</span>
+                  <span className="max-w-[260px] truncate text-[12px] italic text-white/50" title={c.reason}>
                     “{c.reason}”
                   </span>
                   <button className="btn-primary px-3 py-1 text-xs" onClick={() => resolveCorrection(c.id, true)}>
@@ -191,16 +191,16 @@ export default function Admin() {
       )}
 
       <div className="card overflow-hidden">
-        <div className="border-b border-slate-200 px-5 py-3">
+        <div className="border-b border-white/10 px-5 py-3">
           <h2 className="text-sm font-bold uppercase tracking-wide text-navy-900">Departments — focal person contacts</h2>
-          <p className="mt-0.5 text-[12px] text-slate-500">
+          <p className="mt-0.5 text-[12px] text-white/50">
             First message = username + password + instructions (email and WhatsApp when configured). Afterwards, departments with a pending sheet get an automatic reminder each morning (9:00 AM PKT).
           </p>
         </div>
         <div className="scroll-thin overflow-x-auto">
           <table className="w-full" style={{ minWidth: 760 }}>
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50">
+              <tr className="border-b border-white/10 bg-white/[0.04]">
                 <th className="th">Code</th>
                 <th className="th">Department</th>
                 <th className="th">Schemes</th>
@@ -211,7 +211,7 @@ export default function Admin() {
             </thead>
             <tbody>
               {depts.map((d) => (
-                <tr key={d.id} className="border-b border-slate-100 hover:bg-navy-50/30">
+                <tr key={d.id} className="border-b border-white/[0.07] hover:bg-navy-50/30">
                   <td className="td font-bold text-navy-800">{d.code}</td>
                   <td className="td max-w-[280px] truncate" title={d.name}>{d.name}</td>
                   <td className="td">{d._count.schemes}</td>
@@ -254,7 +254,7 @@ export default function Admin() {
       </div>
 
       <div className="card overflow-hidden">
-        <div className="border-b border-slate-200 px-5 py-3">
+        <div className="border-b border-white/10 px-5 py-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-bold uppercase tracking-wide text-navy-900">User accounts</h2>
             <button className="btn-ghost px-3 py-1 text-xs" onClick={() => setShowPwd((v) => !v)}>
@@ -265,7 +265,7 @@ export default function Admin() {
         <div className="scroll-thin overflow-x-auto">
           <table className="w-full" style={{ minWidth: 1180 }}>
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50">
+              <tr className="border-b border-white/10 bg-white/[0.04]">
                 <th className="th">Username</th>
                 <th className="th">Name / Department</th>
                 <th className="th">Role</th>
@@ -278,7 +278,7 @@ export default function Admin() {
             </thead>
             <tbody>
               {users.map((u) => (
-                <tr key={u.id} className="border-b border-slate-100 hover:bg-navy-50/30">
+                <tr key={u.id} className="border-b border-white/[0.07] hover:bg-navy-50/30">
                   <td className="td font-semibold text-navy-800">{u.username}</td>
                   <td className="td max-w-[220px] truncate" title={u.department ? u.department.name : u.name}>
                     {u.department ? u.department.name : u.name}
@@ -287,16 +287,16 @@ export default function Admin() {
                     <span
                       className={
                         u.role === "SUPERADMIN"
-                          ? "badge border-navy-800 bg-navy-800 text-white"
+                          ? "badge border-navy-800 bg-white/90 text-black"
                           : u.role === "ADMIN"
                             ? "badge border-navy-300 bg-navy-100 text-navy-800"
-                            : "badge border-slate-200 bg-slate-50 text-slate-600"
+                            : "badge border-white/10 bg-white/[0.04] text-white/60"
                       }
                     >
                       {u.role}
                     </span>
                   </td>
-                  <td className="td whitespace-nowrap font-mono text-[12px] text-slate-700">
+                  <td className="td whitespace-nowrap font-mono text-[12px] text-white/75">
                     {u.passwordPlain ? (showPwd ? u.passwordPlain : "•".repeat(Math.min(10, u.passwordPlain.length))) : "—"}
                   </td>
                   <td className="td">
@@ -317,7 +317,7 @@ export default function Admin() {
                       onChange={(e) => setUPhones((p) => ({ ...p, [u.id]: e.target.value.replace(/[^\d+]/g, "") }))}
                     />
                   </td>
-                  <td className="td whitespace-nowrap text-[12px] text-slate-500">{u.lastLoginAt ? fmtDate(u.lastLoginAt) : "never"}</td>
+                  <td className="td whitespace-nowrap text-[12px] text-white/50">{u.lastLoginAt ? fmtDate(u.lastLoginAt) : "never"}</td>
                   <td className="td whitespace-nowrap text-right">
                     <button className="btn-ghost mr-2 px-3 py-1 text-xs" onClick={() => saveUserContact(u)}>
                       Save

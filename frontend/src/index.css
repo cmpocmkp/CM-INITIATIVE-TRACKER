@@ -3,8 +3,14 @@
 @tailwind utilities;
 
 body {
-  /* Very light navy wash behind the white tiles */
-  @apply bg-[#f2f5f9] text-neutral-800 antialiased;
+  /* Deep charcoal with soft smoky light wisps behind the glass panels */
+  @apply bg-[#1d2024] text-white/85 antialiased;
+  background-image:
+    radial-gradient(1100px 520px at 78% -10%, rgba(255, 255, 255, 0.10), transparent 60%),
+    radial-gradient(900px 480px at -12% 32%, rgba(255, 255, 255, 0.07), transparent 55%),
+    radial-gradient(760px 420px at 55% 118%, rgba(255, 255, 255, 0.075), transparent 60%),
+    linear-gradient(160deg, #26292e 0%, #1d2024 45%, #24272d 100%);
+  background-attachment: fixed;
 }
 
 /* Thin typography app-wide: neutralize bold utilities (max emphasis = medium). */
@@ -22,48 +28,55 @@ strong {
 
 @layer components {
   .card {
-    @apply rounded-xl border border-slate-200 bg-white shadow-card;
+    @apply rounded-3xl border border-white/[0.12] bg-white/[0.07] backdrop-blur-2xl;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.09),
+      inset 0 0 0 0.5px rgba(255, 255, 255, 0.03),
+      0 18px 44px rgba(0, 0, 0, 0.28);
   }
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-primary {
-    @apply btn bg-[#55575c] text-white hover:bg-[#45474b];
+    @apply btn bg-white/90 text-black hover:bg-white;
   }
   .btn-ghost {
-    @apply btn border border-slate-300 bg-white text-slate-700 hover:bg-slate-50;
+    @apply btn border border-white/15 bg-white/[0.06] text-white/80 backdrop-blur hover:bg-white/10 hover:text-white;
   }
   .input {
-    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-navy-500 focus:ring-2 focus:ring-navy-100;
+    @apply w-full rounded-xl border border-white/15 bg-white/[0.06] px-3 py-2 text-sm text-white/90 outline-none backdrop-blur transition placeholder:text-white/30 focus:border-white/35 focus:ring-2 focus:ring-white/15;
+  }
+  .input option {
+    @apply bg-[#26282d] text-white/90;
   }
   .label {
-    @apply mb-1 block text-sm font-medium text-slate-700;
+    @apply mb-1 block text-sm font-medium text-white/70;
   }
   .badge {
     @apply inline-flex items-center whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium;
   }
   .th {
-    @apply px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500;
+    @apply px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-white/40;
   }
   .td {
-    @apply px-3 py-2.5 align-top text-sm text-slate-700;
+    @apply px-3 py-2.5 align-top text-sm text-white/80;
   }
   /* Spreadsheet cells */
   .cell {
-    @apply h-10 w-full border-0 bg-transparent px-2.5 text-[13px] text-slate-800 outline-none placeholder:text-slate-300 focus:bg-navy-50/60 focus:ring-2 focus:ring-inset focus:ring-navy-400;
+    @apply h-10 w-full border-0 bg-transparent px-2.5 text-[13px] text-white/90 outline-none placeholder:text-white/25 focus:bg-white/10 focus:ring-2 focus:ring-inset focus:ring-white/40;
   }
   .cell:disabled {
-    @apply cursor-not-allowed bg-slate-50/60 text-slate-300;
+    @apply cursor-not-allowed bg-white/[0.03] text-white/25;
   }
   .cell-dirty {
-    @apply bg-amber-50;
+    @apply bg-white/[0.09];
   }
   /* Excel-like grid */
   .grid-td {
-    @apply border-b border-r border-slate-200 p-0 align-middle;
+    @apply border-b border-r border-white/10 p-0 align-middle;
   }
   .grid-th {
-    @apply border-b-2 border-r border-slate-200 border-b-navy-500 bg-white px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-slate-500;
+    @apply border-b-2 border-r border-white/10 border-b-white/40 bg-white/[0.05] px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-white/45 backdrop-blur;
   }
 }
 
@@ -72,8 +85,8 @@ strong {
   height: 8px;
 }
 .scroll-thin::-webkit-scrollbar-thumb {
-  @apply rounded-full bg-slate-300;
+  @apply rounded-full bg-white/20;
 }
 .scroll-thin::-webkit-scrollbar-track {
-  @apply bg-slate-100;
+  @apply bg-white/[0.04];
 }

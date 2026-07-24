@@ -312,8 +312,8 @@ export default function Entry() {
       disabled={opts?.disabled}
       className={cn(
         "cell text-right",
-        opts?.disabled && "cursor-not-allowed text-slate-300",
-        opts?.missing && "bg-neutral-100 ring-1 ring-inset ring-neutral-400",
+        opts?.disabled && "cursor-not-allowed text-white/30",
+        opts?.missing && "bg-white/10 ring-1 ring-inset ring-white/60",
       )}
       value={drafts[fr.key]?.[field] ?? ""}
       placeholder={opts?.placeholder}
@@ -330,25 +330,25 @@ export default function Entry() {
   return (
     <div className="space-y-4">
       <Heading
-        title="Daily Data Entry"
-        subtitle="Cumulative % from start — Δ, financial % and statuses compute automatically."
+        title="Weekly Data Entry"
+        subtitle="Weekly collection — every Monday. Cumulative % from start; Δ, financial % and statuses compute automatically."
         action={
           <div className="flex items-center gap-3">
-            <span className="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-[13px] text-neutral-700">
-              Reporting date: <span className="font-medium">{date ? fmtDate(date) : "…"}</span>
-              <span className="ml-1.5 text-[11px] text-neutral-400">(today · Pakistan)</span>
+            <span className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-[13px] text-white/75">
+              Reporting week: <span className="font-medium">Mon {date ? fmtDate(date) : "…"}</span>
+              <span className="ml-1.5 text-[11px] text-white/40">(current week · Pakistan)</span>
             </span>
             <button
               className={cn("btn-primary", !allComplete && editableRows.length > 0 && "opacity-80")}
               onClick={saveAll}
               disabled={saving || editableRows.length === 0}
-              title={allComplete ? "All rows complete — submit the day" : "Fill every required field first (click to highlight what's missing)"}
+              title={allComplete ? "All rows complete — submit the week" : "Fill every required field first (click to highlight what's missing)"}
             >
               {saving
                 ? "Submitting…"
                 : editableRows.length === 0
-                  ? "Day Submitted ✓"
-                  : `Submit Day (${completeRows.length}/${editableRows.length})`}
+                  ? "Week Submitted ✓"
+                  : `Submit Week (${completeRows.length}/${editableRows.length})`}
             </button>
           </div>
         }
@@ -356,29 +356,29 @@ export default function Entry() {
 
       {/* Completion strip — the user always knows where they stand */}
       {editableRows.length > 0 && (
-        <div className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white px-4 py-2.5">
-          <span className="h-[4px] w-40 flex-1 overflow-hidden rounded-full bg-neutral-100">
+        <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.06] px-4 py-2.5">
+          <span className="h-[4px] w-40 flex-1 overflow-hidden rounded-full bg-white/10">
             <span
-              className="block h-full rounded-full bg-neutral-800 transition-all"
+              className="block h-full rounded-full bg-white/85 transition-all"
               style={{ width: `${(completeRows.length / editableRows.length) * 100}%` }}
             />
           </span>
-          <span className="whitespace-nowrap text-[12px] tabular-nums text-neutral-600">
+          <span className="whitespace-nowrap text-[12px] tabular-nums text-white/60">
             {completeRows.length}/{editableRows.length} rows complete
           </span>
-          <span className="hidden whitespace-nowrap text-[11px] text-neutral-400 lg:inline">
-            · all fields required except Issues &amp; Details · one submission per day — then the sheet locks
+          <span className="hidden whitespace-nowrap text-[11px] text-white/40 lg:inline">
+            · all fields required except Issues &amp; Details · one submission per week — then the sheet locks
           </span>
         </div>
       )}
       {editableRows.length === 0 && rows.some((r) => r.dayLocked) && (
-        <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-2.5 text-[13px] text-neutral-700">
-          🔒 Today&apos;s sheet is submitted and locked. To fix a mistake use{" "}
+        <div className="rounded-lg border border-white/10 bg-white/[0.04] px-4 py-2.5 text-[13px] text-white/75">
+          🔒 This week&apos;s sheet is submitted and locked. To fix a mistake use{" "}
           <span className="font-medium">request correction</span> on the row — the CM Office approves or rejects it.
         </div>
       )}
 
-      {notice && <div className="rounded-lg border border-neutral-300 bg-neutral-50 px-4 py-2.5 text-[13px] text-neutral-800">{notice}</div>}
+      {notice && <div className="rounded-lg border border-white/15 bg-white/[0.04] px-4 py-2.5 text-[13px] text-white/85">{notice}</div>}
       {err && <ErrorBox message={err} />}
 
       <div className="card overflow-hidden">
@@ -401,11 +401,11 @@ export default function Entry() {
             </colgroup>
             <thead className="sticky top-0 z-20">
               <tr>
-                <th className="grid-th sticky left-0 z-30 bg-white shadow-[2px_0_4px_-2px_rgba(11,74,104,0.15)]">Scheme / Work Item</th>
+                <th className="grid-th sticky left-0 z-30 !bg-[#26282d] shadow-[2px_0_8px_rgba(0,0,0,0.45)]">Scheme / Work Item</th>
                 <th className="grid-th">Phase</th>
                 <th className="grid-th !text-right">% Done</th>
-                <th className="grid-th !text-center">Δ Today</th>
-                <th className="grid-th">Work Done Today</th>
+                <th className="grid-th !text-center">Δ Week</th>
+                <th className="grid-th">Work Done This Week</th>
                 <th className="grid-th !text-right">Manpower</th>
                 <th className="grid-th !text-right">Machinery</th>
                 <th className="grid-th">Site Status</th>
@@ -429,24 +429,24 @@ export default function Entry() {
                 const prevPct = fr.prev?.physicalProgressPct ?? null;
                 const typedPct = d.physicalProgressPct === "" ? (fr.today?.physicalProgressPct ?? null) : Number(d.physicalProgressPct);
                 const delta = fmtDelta(typedPct, prevPct);
-                const nameBg = dirty ? "bg-neutral-100" : isInit ? "bg-navy-50/50" : "bg-white";
+                const nameBg = dirty ? "bg-[#2e3036]" : isInit ? "bg-[#292b31]" : "bg-[#242629]";
                 const missSet = new Set<string>(!locked ? missingOf(fr, d) : []);
                 const hl = (f: keyof Draft) => attempted && missSet.has(f); // highlight after a submit attempt
                 const rowDone = !locked && missSet.size === 0;
 
                 return (
-                  <tr key={fr.key} className={cn("group/row", dirty && "bg-neutral-100/60", isInit && !dirty && "bg-navy-50/30")}>
+                  <tr key={fr.key} className={cn("group/row", dirty && "bg-white/[0.07]", isInit && !dirty && "bg-white/[0.04]")}>
                     {/* Name (frozen) */}
                     <td className={cn("grid-td sticky left-0 z-10 shadow-[2px_0_4px_-2px_rgba(11,74,104,0.12)]", nameBg)}>
                       <div className={cn("px-3 py-2", fr.isSub && "pl-8")}>
-                        <div className={cn("truncate text-[13px] font-medium leading-tight", isInit ? "text-navy-800" : fr.isSub ? "text-slate-600" : "text-slate-900")} title={fr.name}>
+                        <div className={cn("truncate text-[13px] font-medium leading-tight", isInit ? "text-navy-800" : fr.isSub ? "text-white/60" : "text-white/95")} title={fr.name}>
                           {fr.isSub && <span className="mr-1.5 text-navy-300">└</span>}
-                          {fr.tag === "INITIATIVE" && <span className="mr-1.5 rounded bg-navy-600 px-1 py-px text-[9px] font-bold text-white">INITIATIVE</span>}
+                          {fr.tag === "INITIATIVE" && <span className="mr-1.5 rounded bg-white/90 px-1 py-px text-[9px] font-bold text-black">INITIATIVE</span>}
                           {fr.tag === "PRP" && <span className="mr-1.5 rounded bg-navy-50 px-1 py-px text-[9px] font-bold text-navy-600 ring-1 ring-navy-200">PRP</span>}
                           {fr.name}
                         </div>
-                        <div className="mt-0.5 flex items-center gap-2 whitespace-nowrap text-[10.5px] text-slate-400">
-                          {fr.adpCode && <span className="font-medium text-slate-400">#{fr.adpCode}</span>}
+                        <div className="mt-0.5 flex items-center gap-2 whitespace-nowrap text-[10.5px] text-white/40">
+                          {fr.adpCode && <span className="font-medium text-white/40">#{fr.adpCode}</span>}
                           {fr.computed ? (
                             <span>auto from {fr.schemeCount} scheme{fr.schemeCount === 1 ? "" : "s"}</span>
                           ) : fr.prev ? (
@@ -456,12 +456,12 @@ export default function Entry() {
                           ) : null}
                           {schemeWithSubs && <span>rolls up</span>}
                           {frozen && fr.correction !== "PENDING" && (
-                            <button className="font-medium text-neutral-700 hover:underline" onClick={() => { setCorrFor(fr); setCorrReason(""); }}>
+                            <button className="font-medium text-white/75 hover:underline" onClick={() => { setCorrFor(fr); setCorrReason(""); }}>
                               🔒 request correction
                             </button>
                           )}
-                          {fr.correction === "PENDING" && <span className="text-neutral-500">correction pending with CM Office…</span>}
-                          {fr.correction === "APPROVED" && !frozen && <span className="text-neutral-800">✎ correction approved — edit &amp; save (one time)</span>}
+                          {fr.correction === "PENDING" && <span className="text-white/50">correction pending with CM Office…</span>}
+                          {fr.correction === "APPROVED" && !frozen && <span className="text-white/85">✎ correction approved — edit &amp; save (one time)</span>}
                           {fr.entityType === "SCHEME" && !frozen && (
                             <button
                               className="font-semibold text-navy-500 opacity-0 transition-opacity hover:underline group-hover/row:opacity-100"
@@ -480,7 +480,7 @@ export default function Entry() {
                           {frozen ? fr.today?.phase ?? "—" : "—"}
                         </div>
                       ) : (
-                        <select className={cn("cell", hl("phase") && "bg-neutral-100 ring-1 ring-inset ring-neutral-400")} value={d.phase} onChange={(e) => set(fr.key, "phase", e.target.value)}>
+                        <select className={cn("cell", hl("phase") && "bg-white/10 ring-1 ring-inset ring-white/60")} value={d.phase} onChange={(e) => set(fr.key, "phase", e.target.value)}>
                           <option value="">{fr.prev?.phase ? `(${fr.prev.phase})` : "select…"}</option>
                           {PHASES.map((p) => (
                             <option key={p} value={p}>{p}</option>
@@ -493,7 +493,7 @@ export default function Entry() {
                       {fr.computed ? (
                         <div className="flex h-10 items-center justify-end gap-1 px-2.5 text-[13px] font-bold text-navy-700">
                           {fmtPct(fr.rolledPhysical)}
-                          <span className="text-[8px] font-bold tracking-wide text-slate-400">AUTO</span>
+                          <span className="text-[8px] font-bold tracking-wide text-white/40">AUTO</span>
                         </div>
                       ) : (
                         cellTyped(fr, "physicalProgressPct", "pct", { placeholder: prevPct != null ? String(prevPct) : "0–100", disabled: schemeWithSubs || frozen, missing: hl("physicalProgressPct") })
@@ -503,7 +503,7 @@ export default function Entry() {
                     <td className="grid-td text-center"><Delta value={locked ? null : delta} /></td>
                     {/* Work */}
                     <td className="grid-td">
-                      <input className={cn("cell", hl("narrative") && "bg-neutral-100 ring-1 ring-inset ring-neutral-400")} value={d.narrative} placeholder={fr.computed || frozen ? "" : "today's work…"} onChange={(e) => set(fr.key, "narrative", e.target.value)} disabled={fr.computed || frozen} />
+                      <input className={cn("cell", hl("narrative") && "bg-white/10 ring-1 ring-inset ring-white/60")} value={d.narrative} placeholder={fr.computed || frozen ? "" : "this week's work…"} onChange={(e) => set(fr.key, "narrative", e.target.value)} disabled={fr.computed || frozen} />
                     </td>
                     <td className="grid-td">{cellTyped(fr, "manpower", "int", { placeholder: fr.prev?.manpower?.toString(), disabled: locked, missing: hl("manpower") })}</td>
                     <td className="grid-td">{cellTyped(fr, "machinery", "int", { placeholder: fr.prev?.machinery?.toString(), disabled: locked, missing: hl("machinery") })}</td>
@@ -536,13 +536,13 @@ export default function Entry() {
                     </td>
                     <td className="grid-td !border-r-0 text-center">
                       {fr.computed ? (
-                        <span className="text-[9px] font-bold text-slate-300">AUTO</span>
+                        <span className="text-[9px] font-bold text-white/30">AUTO</span>
                       ) : frozen ? (
                         <span title="Submitted — locked for today. Use 'request correction' to edit.">🔒</span>
                       ) : rowDone ? (
-                        <span className="font-bold text-neutral-900" title="Row complete — ready to submit">✓</span>
+                        <span className="font-bold text-white/95" title="Row complete — ready to submit">✓</span>
                       ) : (
-                        <span className="text-[10px] tabular-nums text-neutral-400" title={`${missSet.size} required field(s) empty`}>
+                        <span className="text-[10px] tabular-nums text-white/40" title={`${missSet.size} required field(s) empty`}>
                           {missSet.size} left
                         </span>
                       )}
@@ -553,11 +553,11 @@ export default function Entry() {
             </tbody>
           </table>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 bg-white px-4 py-2 text-[11px] text-slate-400">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/10 bg-white/[0.04] px-4 py-2 text-[11px] text-white/40">
           <div className="flex items-center gap-4">
-            <span><span className="text-neutral-500">●</span> unsaved</span>
-            <span><span className="font-bold text-neutral-900">✓</span> saved</span>
-            <span><span className="font-bold text-slate-300">AUTO</span> computed — fill the lowest level only</span>
+            <span><span className="text-white/50">●</span> unsaved</span>
+            <span><span className="font-bold text-white/95">✓</span> saved</span>
+            <span><span className="font-bold text-white/30">AUTO</span> computed — fill the lowest level only</span>
           </div>
           <div>
             {rows.length} rows · {dirtyKeys.length} unsaved
@@ -567,11 +567,11 @@ export default function Entry() {
 
       {/* Correction request modal */}
       {corrFor && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/40 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
           <div className="card w-full max-w-md p-6">
-            <h3 className="text-[15px] text-neutral-900">Request correction</h3>
-            <p className="mt-1 text-[12px] leading-relaxed text-neutral-500">
-              Today&apos;s entry for <span className="text-neutral-800">{corrFor.name}</span> is locked. Explain what
+            <h3 className="text-[15px] text-white/95">Request correction</h3>
+            <p className="mt-1 text-[12px] leading-relaxed text-white/50">
+              Today&apos;s entry for <span className="text-white/85">{corrFor.name}</span> is locked. Explain what
               needs correcting — the CM Office will approve or reject; on approval you can edit and save once.
             </p>
             <textarea
@@ -598,8 +598,8 @@ export default function Entry() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-950/50 p-4">
           <div className="card w-full max-w-md p-6">
             <h3 className="text-[15px] font-bold text-navy-900">Add work item</h3>
-            <p className="mt-1 text-[12px] text-slate-500">
-              Under: <span className="font-medium text-slate-700">{addFor.schemeName}</span> — e.g. “Dalazak Road Underpass”. It becomes its own daily-tracked row; the scheme&apos;s % rolls up from its work items.
+            <p className="mt-1 text-[12px] text-white/50">
+              Under: <span className="font-medium text-white/75">{addFor.schemeName}</span> — e.g. “Dalazak Road Underpass”. It becomes its own daily-tracked row; the scheme&apos;s % rolls up from its work items.
             </p>
             <div className="mt-4 space-y-3">
               <div>

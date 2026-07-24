@@ -4,23 +4,26 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Monochrome scale — the whole app is black & white
+        // Glassmorphic dark theme: the old light-mode "navy" text/tint scale is
+        // inverted into white-alpha so navy-900 (was near-black text) renders
+        // near-white on the dark glass, and navy-50 (was a light tint) renders
+        // as a faint translucent wash.
         navy: {
-          50: "#fafafa",
-          100: "#f5f5f5",
-          200: "#e5e5e5",
-          300: "#d4d4d4",
-          400: "#a3a3a3",
-          500: "#737373",
-          600: "#525252",
-          700: "#404040",
-          800: "#262626",
-          900: "#171717",
-          950: "#0a0a0a",
+          50: "#ffffff0d",
+          100: "#ffffff14",
+          200: "#ffffff21",
+          300: "#ffffff33",
+          400: "#ffffff59",
+          500: "#ffffff80",
+          600: "#ffffffa3",
+          700: "#ffffffbf",
+          800: "#ffffffd9",
+          900: "#fffffff2",
+          950: "#ffffff",
         },
       },
       boxShadow: {
-        card: "0 1px 2px 0 rgb(11 31 58 / 0.06), 0 1px 3px 0 rgb(11 31 58 / 0.08)",
+        card: "inset 0 1px 0 rgba(255,255,255,.09), 0 18px 44px rgba(0,0,0,.38)",
       },
       fontFamily: {
         sans: ["Inter", "ui-sans-serif", "system-ui", "Segoe UI", "Arial", "sans-serif"],

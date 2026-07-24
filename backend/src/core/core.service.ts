@@ -31,6 +31,18 @@ export function pktNow(): Date {
 }
 
 /**
+ * Reporting anchor: data is collected WEEKLY, every Monday.
+ * The reporting day is the Monday of the current PKT week — a sheet entered
+ * any day of the week counts against that Monday (lateness shows up in the
+ * compliance analysis, not as a different reporting date).
+ */
+export function reportingDay(): Date {
+  const t = dateOnly();
+  const back = (t.getUTCDay() + 6) % 7; // days since Monday (Mon=0 … Sun=6)
+  return new Date(t.getTime() - back * 86400000);
+}
+
+/**
  * Date-only (midnight UTC key). Without input → TODAY IN PAKISTAN, so at
  * 2 AM PKT the reporting day is already the new Pakistani date regardless
  * of the server's UTC clock.
@@ -129,7 +141,7 @@ export class CoreService {
 
   // ── Sectors (scheme.sector dimension — distinct from owning Department) ──
   async sectorsList(user: SessionUser) {
-    const today = dateOnly();
+    const today = reportingDay();
     const schemes = await this.prisma.scheme.findMany({
       where: this.schemeScope(user),
       include: this.latestInclude,
@@ -362,8 +374,9 @@ export class CoreService {
 
   // ── Daily sheet (Excel-style, with Δ vs previous report) ─────
   async sheet(user: SessionUser, dateStr?: string) {
-    // Departments always see today's (PKT) sheet; staff may inspect a past date.
-    const date = isStaff(user) && dateStr ? dateOnly(dateStr) : dateOnly();
+    // Departments always see the current reporting week's sheet (Monday, PKT);
+    // staff may inspect a past reporting date.
+    const date = isStaff(user) && dateStr ? dateOnly(dateStr) : reportingDay();
 
     const schemes = await this.prisma.scheme.findMany({
       where: this.schemeScope(user),
@@ -498,8 +511,8 @@ export class CoreService {
   async saveSheet(user: SessionUser, dateStr: string | undefined, entries: SheetEntryInput[]) {
     if (!Array.isArray(entries) || !entries.length) throw new BadRequestException("No entries to save");
     if (entries.length > 1000) throw new BadRequestException("Too many entries");
-    // Departments always report against TODAY (Pakistan time) — no date picking.
-    const date = isStaff(user) && dateStr ? dateOnly(dateStr) : dateOnly();
+    // Departments always report against the current week's Monday (PKT) — no date picking.
+    const date = isStaff(user) && dateStr ? dateOnly(dateStr) : reportingDay();
 
     const myschemes = await this.prisma.scheme.findMany({
       where: this.schemeScope(user),
@@ -736,7 +749,7 @@ export class CoreService {
       throw new BadRequestException("entityType and entityId are required");
     if (reason.length < 5) throw new BadRequestException("Please give a short reason for the correction");
     if (!user.departmentId) throw new ForbiddenException("Only department accounts request corrections");
-    const date = body.date ? dateOnly(body.date) : dateOnly();
+    const date = body.date ? dateOnly(body.date) : reportingDay();
 
     // Ownership + display name
     let entityName = "";
@@ -803,7 +816,7 @@ export class CoreService {
 
   // ── Dashboard rollups ────────────────────────────────────────
   async dashboard(user: SessionUser) {
-    const today = dateOnly();
+    const today = reportingDay();
     const scoped = !isStaff(user);
 
     const schemes = await this.prisma.scheme.findMany({
@@ -927,7 +940,7 @@ export class CoreService {
     return {
       role: user.role,
       department: scoped ? { id: user.departmentId, name: user.departmentName } : null,
-      totals: roll,
+      totals: { ...roll, officialCount: schemes.filter((s) => s.isOfficial).length },
       stageDist,
       attention,
       sectors,
@@ -937,11 +950,11 @@ export class CoreService {
     };
   }
 
-  // ── Departmental performance analysis (last 14 days, PKT) ────
+  // ── Departmental performance analysis (last 8 reporting weeks, PKT) ────
   async complianceAnalysis(_user: SessionUser) {
-    const DAYS = 14;
-    const today = dateOnly();
-    const since = new Date(today.getTime() - (DAYS - 1) * 86400000);
+    const WEEKS = 8;
+    const today = reportingDay();
+    const since = new Date(today.getTime() - (WEEKS - 1) * 7 * 86400000);
 
     const depts = await this.prisma.department.findMany({
       orderBy: { name: "asc" },
@@ -1002,7 +1015,7 @@ export class CoreService {
       .map((d) => {
         const unitsOwned = d.schemes.length + (schemelessByDept.get(d.id) ?? 0);
         const a = acc.get(d.id);
-        const expected = unitsOwned * DAYS;
+        const expected = unitsOwned * WEEKS;
         const reported = a?.units.size ?? 0;
         const avgHour = a && a.hourN ? a.hourSum / a.hourN : null;
         return {
@@ -1024,7 +1037,8 @@ export class CoreService {
 
     const ranked = [...rows].sort((x, y) => (y.compliancePct ?? -1) - (x.compliancePct ?? -1) || (x.avgSubmitHourPkt ?? 99) - (y.avgSubmitHourPkt ?? 99));
     return {
-      windowDays: DAYS,
+      windowDays: WEEKS * 7,
+      windowWeeks: WEEKS,
       since: since.toISOString().slice(0, 10),
       today: today.toISOString().slice(0, 10),
       rows: ranked,

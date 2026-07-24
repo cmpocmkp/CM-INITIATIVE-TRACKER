@@ -39,10 +39,10 @@ export class DigestService {
       .filter(Boolean);
   }
 
-  /** 6:00 PM Pakistan time, every day — CMPO leadership digest. */
-  @Cron("0 18 * * *", { timeZone: "Asia/Karachi" })
+  /** 6:00 PM Pakistan time, every MONDAY (weekly collection day) — CMPO leadership digest. */
+  @Cron("0 18 * * 1", { timeZone: "Asia/Karachi" })
   async scheduled() {
-    this.logger.log("Running daily digest cron…");
+    this.logger.log("Running weekly digest cron…");
     try {
       const res = await this.send();
       this.logger.log(`Digest: ${JSON.stringify(res)}`);
@@ -51,8 +51,8 @@ export class DigestService {
     }
   }
 
-  /** 6:05 PM PKT — WhatsApp daily progress report to the leadership list. */
-  @Cron("5 18 * * *", { timeZone: "Asia/Karachi" })
+  /** 6:05 PM PKT Monday — WhatsApp weekly progress report to the leadership list. */
+  @Cron("5 18 * * 1", { timeZone: "Asia/Karachi" })
   async scheduledWhatsappReport() {
     try {
       const res = await this.sendWhatsappReport();
@@ -100,7 +100,7 @@ export class DigestService {
           })
         : await this.whatsapp.send(
             to,
-            `*CM INITIATIVE TRACKER*\n_Daily Progress Report — ${d.today}_\nSchemes: *${d.totals.count}*\nPhysical Progress: *${d.totals.avgPhysical.toFixed(1)}%*\nReported Today: *${d.totals.updatedToday}/${d.totals.count}*\nDepartments Pending: *${pendingDepts}*\nNeeds Attention: ${attention}\n\nLive dashboard:\n${appUrl}\n_Chief Minister Policy Office (CMPO)_`,
+            `*CM INITIATIVE TRACKER*\n_Weekly Progress Report — week of ${d.today}_\nSchemes: *${d.totals.count}*\nPhysical Progress: *${d.totals.avgPhysical.toFixed(1)}%*\nReported This Week: *${d.totals.updatedToday}/${d.totals.count}*\nDepartments Pending: *${pendingDepts}*\nNeeds Attention: ${attention}\n\nLive dashboard:\n${appUrl}\n_Chief Minister Policy Office (CMPO)_`,
           );
       (r.ok ? sent : failed).push(to);
     }
@@ -112,19 +112,19 @@ export class DigestService {
    * Each round only reaches departments whose sheet is still pending,
    * so submitting at any point stops further reminders that day.
    */
-  @Cron("0 9 * * *", { timeZone: "Asia/Karachi" })
+  @Cron("0 9 * * 1", { timeZone: "Asia/Karachi" })
   remind9am() {
     return this.runReminder(1);
   }
-  @Cron("0 13 * * *", { timeZone: "Asia/Karachi" })
+  @Cron("0 13 * * 1", { timeZone: "Asia/Karachi" })
   remind1pm() {
     return this.runReminder(2);
   }
-  @Cron("0 16 * * *", { timeZone: "Asia/Karachi" })
+  @Cron("0 16 * * 1", { timeZone: "Asia/Karachi" })
   remind4pm() {
     return this.runReminder(3);
   }
-  @Cron("0 17 * * *", { timeZone: "Asia/Karachi" })
+  @Cron("0 17 * * 1", { timeZone: "Asia/Karachi" })
   remind5pm() {
     return this.runReminder(4);
   }
@@ -148,7 +148,7 @@ export class DigestService {
     const label = LABELS[Math.max(1, Math.min(attempt, 4))];
     const finalLine =
       attempt >= 4
-        ? " This is the final reminder — departments without today's entry are flagged in this evening's digest to the CM Office."
+        ? " This is the final reminder — departments without this week's entry are flagged in this evening's digest to the CM Office."
         : attempt >= 2
           ? " Earlier reminder(s) today have not been actioned yet."
           : "";
@@ -179,7 +179,7 @@ export class DigestService {
             })
           : await this.whatsapp.send(
               p.phone as string,
-              `*CM Initiative Tracker — ${label}*\n\nDear ${p.name},\n\nToday's progress entry for your ${p._count.schemes} priority scheme(s) is still pending.${finalLine}\n\nFill your daily sheet:\n${appUrl}/entry\n\nSign in with your department code *${p.code}*.\n\n— Chief Minister Policy Office (CMPO)`,
+              `*CM Initiative Tracker — ${label}*\n\nDear ${p.name},\n\nThis week's progress entry (due Monday) for your ${p._count.schemes} priority scheme(s) is still pending.${finalLine}\n\nFill your weekly sheet:\n${appUrl}/entry\n\nSign in with your department code *${p.code}*.\n\n— Chief Minister Policy Office (CMPO)`,
             );
         if (r.ok) waSent.push(p.code);
       }
@@ -192,7 +192,7 @@ export class DigestService {
       await transport.sendMail({
         from: `CM Initiative Tracker <${process.env.GMAIL_USER}>`,
         to: dept.email as string,
-        subject: `${label}: Daily progress entry pending — ${dept.code} · ${d.today}`,
+        subject: `${label}: Weekly progress entry pending — ${dept.code} · ${d.today}`,
         html: `
 <div style="font-family:Segoe UI,Arial,sans-serif;max-width:560px;margin:0 auto;border:1px solid #e5eaf0;border-radius:12px;overflow:hidden;">
   <div style="background:#0076a9;color:#fff;padding:16px 22px;">
@@ -200,7 +200,7 @@ export class DigestService {
   </div>
   <div style="padding:20px 22px;font-size:14px;color:#1e293b;line-height:1.6;">
     <p>Dear <b>${dept.name}</b>,</p>
-    <p><b>${label}:</b> today's progress entry for your <b>${dept.schemes} priority scheme(s)</b> is still pending.${finalLine}
+    <p><b>${label}:</b> this week's progress entry (due Monday) for your <b>${dept.schemes} priority scheme(s)</b> is still pending.${finalLine}
     Please fill your daily sheet — it takes a few minutes.</p>
     <p style="text-align:center;margin:22px 0;">
       <a href="${appUrl}/entry" style="background:#0076a9;color:#fff;text-decoration:none;padding:11px 26px;border-radius:8px;font-weight:600;">Fill Today's Sheet</a>
@@ -302,10 +302,10 @@ export class DigestService {
         : ""
     }
     <p><b>Every day:</b> open <a href="${appUrl}/entry">Daily Data Entry</a> and fill, for each scheme / work item:
-    current phase, % complete from start, work done today, manpower &amp; machinery on site, site status, and any issues needing decisions.
+    current phase, % complete from start, work done this week, manpower &amp; machinery on site, site status, and any issues needing decisions.
     Figures are cumulative; the system computes the daily increase itself. <b>Once saved, the day's entry locks</b> — corrections go through a request to the CM Office inside the app.</p>
     <p>You can add work items (e.g. individual underpasses) under any scheme with <b>+ Add work item</b>.</p>
-    <p style="font-size:12px;color:#64748b;">A reminder is sent each morning if the day's entry is pending. Your data is visible only to your department and the CM Office.</p>
+    <p style="font-size:12px;color:#64748b;">Data is collected weekly — reminders are sent on Monday if the week's entry is pending. Your data is visible only to your department and the CM Office.</p>
   </div>
 </div>`,
       });
@@ -325,7 +325,7 @@ export class DigestService {
     await transport.sendMail({
       from: `CM Initiative Tracker <${process.env.GMAIL_USER}>`,
       to: to.join(","),
-      subject: `CM Initiative Tracker — Daily Progress Digest · ${today}`,
+      subject: `CM Initiative Tracker — Weekly Progress Digest · ${today}`,
       html,
     });
     return { ok: true, recipients: to };
@@ -410,7 +410,7 @@ export class DigestService {
       ${
         laggards
           ? `<div style="margin-top:16px;padding:10px 12px;background:#fdf3e2;border:1px solid #f5d9a8;border-radius:8px;font-size:12px;color:#92400e;">
-              <b>No update submitted today:</b> ${laggards}
+              <b>No update submitted this week:</b> ${laggards}
             </div>`
           : ""
       }

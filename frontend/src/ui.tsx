@@ -5,9 +5,9 @@ export const cn = (...parts: (string | false | null | undefined)[]) => parts.fil
 export function Kpi({ label, value, sub }: { label: string; value: React.ReactNode; sub?: React.ReactNode }) {
   return (
     <div className="card border-l-4 border-l-navy-700 p-4">
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">{label}</div>
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-white/50">{label}</div>
       <div className="mt-1 text-2xl font-bold text-navy-900">{value}</div>
-      {sub != null && <div className="mt-0.5 text-xs text-slate-500">{sub}</div>}
+      {sub != null && <div className="mt-0.5 text-xs text-white/50">{sub}</div>}
     </div>
   );
 }
@@ -25,13 +25,13 @@ export function Bar({ value, className }: { value: number; className?: string })
 }
 
 const STAGE_STYLE: Record<Stage, string> = {
-  NOT_STARTED: "bg-slate-100 text-slate-600 border-slate-200",
+  NOT_STARTED: "bg-white/10 text-white/60 border-white/10",
   FEASIBILITY: "bg-navy-50 text-navy-700 border-navy-200",
   PC1_APPROVAL: "bg-navy-100 text-navy-800 border-navy-300",
-  TENDERING: "bg-neutral-100 text-neutral-700 border-neutral-300",
-  EXECUTION: "bg-navy-700 text-white border-navy-700",
-  COMPLETED: "bg-neutral-50 text-neutral-700 border-neutral-300",
-  ON_HOLD: "bg-neutral-100 text-neutral-900 border-neutral-300",
+  TENDERING: "bg-white/10 text-white/75 border-white/15",
+  EXECUTION: "bg-white/90 text-black border-white/90",
+  COMPLETED: "bg-white/[0.04] text-white/75 border-white/15",
+  ON_HOLD: "bg-white/10 text-white/95 border-white/15",
 };
 
 export function StageBadge({ stage }: { stage?: Stage | null }) {
@@ -40,11 +40,11 @@ export function StageBadge({ stage }: { stage?: Stage | null }) {
 }
 
 const SITE_STYLE: Record<SiteStatus, string> = {
-  NOT_STARTED: "bg-slate-100 text-slate-600 border-slate-200",
-  ACTIVE: "bg-navy-700 text-white border-navy-700",
-  SLOW: "bg-neutral-100 text-neutral-700 border-neutral-400",
-  HALTED: "bg-white text-neutral-900 border-neutral-900 font-medium",
-  COMPLETED: "bg-neutral-50 text-neutral-700 border-neutral-300",
+  NOT_STARTED: "bg-white/10 text-white/60 border-white/10",
+  ACTIVE: "bg-white/90 text-black border-white/90",
+  SLOW: "bg-white/10 text-white/75 border-white/30",
+  HALTED: "bg-white text-black border-white font-medium",
+  COMPLETED: "bg-white/[0.04] text-white/75 border-white/15",
 };
 
 export function SiteBadge({ status }: { status?: SiteStatus | null }) {
@@ -53,14 +53,14 @@ export function SiteBadge({ status }: { status?: SiteStatus | null }) {
 }
 
 export function Delta({ value }: { value: string | null }) {
-  if (!value) return <span className="text-slate-300">—</span>;
+  if (!value) return <span className="text-white/30">—</span>;
   const positive = value.startsWith("+") && value !== "+0.0%";
   const zero = value === "+0.0%" || value === "-0.0%";
   return (
     <span
       className={cn(
         "inline-block rounded px-1.5 py-0.5 text-[11px] font-bold",
-        zero ? "bg-slate-100 text-slate-500" : positive ? "bg-neutral-50 text-neutral-700" : "bg-neutral-100 text-neutral-900",
+        zero ? "bg-white/10 text-white/50" : positive ? "bg-white/[0.04] text-white/75" : "bg-white/10 text-white/95",
       )}
     >
       {zero ? "0%" : value}
@@ -72,7 +72,7 @@ export function Delta({ value }: { value: string | null }) {
 export function NumBox({ n, size = 30 }: { n: number; size?: number }) {
   return (
     <span
-      className="inline-flex shrink-0 items-center justify-center border border-neutral-300 bg-transparent font-light leading-none text-neutral-900"
+      className="inline-flex shrink-0 items-center justify-center border border-white/30 bg-transparent font-light leading-none text-white/95"
       style={{
         width: size,
         height: size,
@@ -91,7 +91,7 @@ export function Heading({ title, subtitle, action }: { title: string; subtitle?:
     <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
       <div>
         <h1 className="text-xl font-bold tracking-tight text-navy-900 sm:text-2xl">{title}</h1>
-        {subtitle && <p className="mt-1 text-sm text-slate-500">{subtitle}</p>}
+        {subtitle && <p className="mt-1 text-sm text-white/50">{subtitle}</p>}
       </div>
       {action}
     </div>
@@ -100,7 +100,7 @@ export function Heading({ title, subtitle, action }: { title: string; subtitle?:
 
 export function Spinner({ label = "Loading…" }: { label?: string }) {
   return (
-    <div className="flex items-center justify-center gap-3 p-12 text-sm text-slate-500">
+    <div className="flex items-center justify-center gap-3 p-12 text-sm text-white/50">
       <span className="h-5 w-5 animate-spin rounded-full border-2 border-navy-200 border-t-navy-700" />
       {label}
     </div>
@@ -109,15 +109,15 @@ export function Spinner({ label = "Loading…" }: { label?: string }) {
 
 export function ErrorBox({ message }: { message: string }) {
   return (
-    <div className="rounded-lg border border-neutral-300 bg-neutral-100 px-4 py-3 text-sm text-neutral-900">{message}</div>
+    <div className="rounded-lg border border-white/15 bg-white/10 px-4 py-3 text-sm text-white/95">{message}</div>
   );
 }
 
 export function Empty({ title, hint }: { title: string; hint?: string }) {
   return (
     <div className="card flex flex-col items-center justify-center gap-1 p-10 text-center">
-      <div className="text-sm font-medium text-slate-700">{title}</div>
-      {hint && <div className="text-xs text-slate-500">{hint}</div>}
+      <div className="text-sm font-medium text-white/75">{title}</div>
+      {hint && <div className="text-xs text-white/50">{hint}</div>}
     </div>
   );
 }

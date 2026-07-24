@@ -54,13 +54,13 @@ export default function DepartmentDetail() {
       )}
 
       <div className="card overflow-hidden">
-        <div className="border-b border-slate-200 px-5 py-3">
+        <div className="border-b border-white/10 px-5 py-3">
           <h2 className="text-sm font-bold uppercase tracking-wide text-navy-900">Priority Schemes</h2>
         </div>
         <div className="scroll-thin overflow-x-auto">
           <table className="w-full" style={{ minWidth: 900 }}>
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50">
+              <tr className="border-b border-white/10 bg-white/[0.04]">
                 <th className="th">Initiative</th>
                 <th className="th">Scheme</th>
                 <th className="th !text-right">Cost (M)</th>
@@ -76,13 +76,13 @@ export default function DepartmentDetail() {
                 const u = s.updates?.[0];
                 const phys = s.effectivePhysical ?? u?.physicalProgressPct ?? null;
                 return (
-                  <tr key={s.id} className="border-b border-slate-100 hover:bg-navy-50/40">
+                  <tr key={s.id} className="border-b border-white/[0.07] hover:bg-white/[0.06]">
                     <td className="td whitespace-nowrap">
-                      {s.initiative ? <NumBox n={s.initiative.number} size={22} /> : <span className="text-slate-300">—</span>}
+                      {s.initiative ? <NumBox n={s.initiative.number} size={22} /> : <span className="text-white/30">—</span>}
                     </td>
                     <td className="td max-w-[360px]">
                       <Link to={`/schemes/${s.id}`} className="font-medium text-navy-800 hover:text-navy-600">
-                        {s.adpCode && <span className="mr-1.5 text-[11px] text-slate-400">{s.adpCode}</span>}
+                        {s.adpCode && <span className="mr-1.5 text-[11px] text-white/40">{s.adpCode}</span>}
                         {s.name}
                       </Link>
                     </td>
@@ -98,7 +98,7 @@ export default function DepartmentDetail() {
                     <td className="td">
                       <StageBadge stage={s.stage} />
                     </td>
-                    <td className="td whitespace-nowrap text-[12px] text-slate-500">{fmtDate(u?.reportDate)}</td>
+                    <td className="td whitespace-nowrap text-[12px] text-white/50">{fmtDate(u?.reportDate)}</td>
                   </tr>
                 );
               })}
