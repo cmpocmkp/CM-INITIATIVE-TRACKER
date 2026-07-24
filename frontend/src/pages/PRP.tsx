@@ -42,6 +42,7 @@ export default function PRP() {
                 <th className="th">Scheme</th>
                 <th className="th">Department</th>
                 <th className="th">Implementation</th>
+                <th className="th">Cat</th>
                 <th className="th !text-right">Cost (M)</th>
                 <th className="th !text-right">Alloc (M)</th>
                 <th className="th !text-right">Spent (M)</th>
@@ -73,6 +74,15 @@ export default function PRP() {
                         <span className="rounded-md border border-white/20 bg-white/[0.06] px-1.5 py-0.5 text-[11px] text-white/80">
                           {s.implementingAgency}
                         </span>
+                      ) : (
+                        <span className="text-white/30">—</span>
+                      )}
+                    </td>
+                    <td className="td whitespace-nowrap">
+                      {s.pcfmsCategory === "A" ? (
+                        <span className="rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-medium text-black">A</span>
+                      ) : s.pcfmsCategory ? (
+                        <span className="rounded border border-white/25 px-1.5 py-0.5 text-[10px] text-white/70">{s.pcfmsCategory}</span>
                       ) : (
                         <span className="text-white/30">—</span>
                       )}

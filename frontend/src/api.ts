@@ -112,6 +112,14 @@ export interface Scheme {
   isPRP: boolean;
   isOfficial?: boolean;
   implementingAgency?: string | null;
+  pcfmsCategory?: string | null;
+  pcfmsForum?: string | null;
+  pcfmsTag?: string | null;
+  pcfmsOverallStatus?: string | null;
+  pcfmsBudget?: number | null;
+  pcfmsReleases?: number | null;
+  pcfmsExpenditure?: number | null;
+  pcfmsSyncedAt?: string | null;
   isPlaceholder: boolean;
   stage: Stage;
   department: DeptRef;
@@ -211,6 +219,14 @@ export interface SheetRow {
   isPRP: boolean;
   isOfficial?: boolean;
   implementingAgency?: string | null;
+  pcfmsCategory?: string | null;
+  pcfmsForum?: string | null;
+  pcfmsTag?: string | null;
+  pcfmsOverallStatus?: string | null;
+  pcfmsBudget?: number | null;
+  pcfmsReleases?: number | null;
+  pcfmsExpenditure?: number | null;
+  pcfmsSyncedAt?: string | null;
   hasSubs: boolean;
   /** Initiative rows only: has schemes attached → row is auto-computed, not typed. */
   hasSchemes?: boolean;

@@ -191,6 +191,57 @@ export default function SchemeDetail() {
         {msg && <div className="border-t border-white/[0.07] px-6 py-2 text-[12px] text-navy-700">{msg}</div>}
       </div>
 
+      {/* Government position — synced from PCFMS (P&D) */}
+      {(s.pcfmsCategory || s.pcfmsBudget != null) && (
+        <div className="card p-6">
+          <div className="mb-3 flex items-baseline justify-between">
+            <h2 className="text-sm uppercase tracking-widest text-white/95">P&amp;D Position (PCFMS)</h2>
+            <span className="text-[11px] text-white/40">
+              {s.pcfmsSyncedAt ? `synced ${new Date(s.pcfmsSyncedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}` : ""}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-white/40">Category</div>
+              <div className="mt-1">
+                {s.pcfmsCategory === "A" ? (
+                  <span className="badge border-white/90 bg-white/90 text-black">A — Approved</span>
+                ) : s.pcfmsCategory === "B" ? (
+                  <span className="badge border-white/30 bg-white/10 text-white/80">B — PC-1 pending</span>
+                ) : (
+                  <span className="text-white/40">{s.pcfmsCategory ?? "—"}</span>
+                )}
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-white/40">Forum</div>
+              <div className="mt-1 text-[13px] text-white/85">{s.pcfmsForum || "—"}</div>
+            </div>
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-white/40">FY Budget</div>
+              <div className="mt-1 text-[13px] tabular-nums text-white/95">{s.pcfmsBudget != null ? fmtM(s.pcfmsBudget) : "—"}</div>
+            </div>
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-white/40">Released</div>
+              <div className="mt-1 text-[13px] tabular-nums text-white/95">{s.pcfmsReleases != null ? fmtM(s.pcfmsReleases) : "—"}</div>
+            </div>
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-white/40">Expenditure</div>
+              <div className="mt-1 text-[13px] tabular-nums text-white/95">{s.pcfmsExpenditure != null ? fmtM(s.pcfmsExpenditure) : "—"}</div>
+            </div>
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-white/40">P&amp;D Status</div>
+              <div className="mt-1 text-[12px] text-white/75">{(s.pcfmsOverallStatus || "—").replace(/_/g, " ")}</div>
+            </div>
+          </div>
+          {s.pcfmsTag && s.pcfmsTag !== "Normal" && (
+            <div className="mt-3 text-[11px] text-white/50">
+              Tagged <span className="text-white/85">{s.pcfmsTag === "TwentyBnScheme" ? "20bn Scheme" : s.pcfmsTag}</span> in the P&amp;D priority list.
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Work items */}
       <div className="card overflow-hidden">
         <div className="flex items-center justify-between border-b border-white/10 px-5 py-3">

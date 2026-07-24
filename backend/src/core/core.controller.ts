@@ -1,11 +1,15 @@
 import { Body, Controller, Delete, Get, Header, Param, Patch, Post, Query } from "@nestjs/common";
 import { SchemeStage } from "@prisma/client";
 import { CoreService, SheetEntryInput } from "./core.service";
+import { PcfmsService } from "./pcfms.service";
 import { CurrentUser, Roles, SessionUser } from "../auth/decorators";
 
 @Controller()
 export class CoreController {
-  constructor(private core: CoreService) {}
+  constructor(
+    private core: CoreService,
+    private pcfms: PcfmsService,
+  ) {}
 
   @Get("dashboard")
   dashboard(@CurrentUser() user: SessionUser) {
@@ -109,6 +113,21 @@ export class CoreController {
   @Roles("SUPERADMIN", "ADMIN")
   analysis(@CurrentUser() user: SessionUser) {
     return this.core.complianceAnalysis(user);
+  }
+
+  // ── PCFMS (P&D) government-data sync ───────────────────────
+  @Post("pcfms/sync")
+  @Roles("SUPERADMIN", "ADMIN")
+  pcfmsSync() {
+    // fire-and-forget — ~100 API calls take a minute; poll status below
+    void this.pcfms.sync();
+    return { ok: true, started: true };
+  }
+
+  @Get("pcfms/status")
+  @Roles("SUPERADMIN", "ADMIN")
+  pcfmsStatus() {
+    return { last: this.pcfms.lastResult };
   }
 
   // ── Daily-lock correction workflow ─────────────────────────

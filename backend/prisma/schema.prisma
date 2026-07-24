@@ -135,6 +135,17 @@ model Scheme {
   isPlaceholder Boolean     @default(false)
   isOfficial    Boolean     @default(false) // in the official 112-scheme universe (86 list + PRP program)
   implementingAgency String? // executing agency responsible for implementation (PDA, WSSP, CMGP, PKHA …)
+
+  // Government position synced nightly from PCFMS (P&D) — read-only mirror,
+  // distinct from department-reported figures.
+  pcfmsCategory      String?   // A = approved, B = PC-1 pending, R
+  pcfmsForum         String?   // PDWP / CDWP / ECNEC …
+  pcfmsTag           String?   // Flagship / TwentyBnScheme / Normal
+  pcfmsOverallStatus String?   // not_started / on_target / off_target / critically_delay / completed
+  pcfmsBudget        Float?    // FinalBudget (Rs M, current FY)
+  pcfmsReleases      Float?    // progressive releases (Rs M)
+  pcfmsExpenditure   Float?    // progressive expenditure (Rs M)
+  pcfmsSyncedAt      DateTime?
   stage         SchemeStage @default(NOT_STARTED) // lifecycle (PC-1 etc.), changed rarely
 
   departmentId  String

@@ -99,6 +99,21 @@ export default function Reports() {
             <button className="btn-ghost" onClick={loadPreview}>
               👁 Preview
             </button>
+            <button
+              className="btn-ghost"
+              onClick={async () => {
+                setResult("");
+                try {
+                  await api.post("/pcfms/sync");
+                  setResult("✓ P&D (PCFMS) sync started — government figures refresh in about a minute.");
+                } catch (e) {
+                  setResult(`✗ ${(e as Error).message}`);
+                }
+              }}
+              title="Pull Category, budget, releases and expenditure from the P&D PCFMS portal"
+            >
+              ⇅ Sync P&D Data
+            </button>
             <button className="btn-ghost" onClick={remindNow} disabled={sending} title="Email departments that haven't filled this week's sheet">
               🔔 Remind Pending Depts
             </button>
