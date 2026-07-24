@@ -56,16 +56,26 @@ strong {
 
 @layer components {
   .card {
-    @apply rounded-3xl backdrop-blur-2xl;
-    /* Glass rim-light: gradient border, bright where light "catches" the edge
-       (top-left + a lower-right spot), like the reference glass panels. */
-    border: 1px solid transparent;
-    background:
-      linear-gradient(165deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.02) 55%, rgba(255, 255, 255, 0.05) 100%) padding-box,
-      linear-gradient(150deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.12) 22%, rgba(255, 255, 255, 0.06) 55%, rgba(255, 255, 255, 0.34) 100%) border-box;
+    @apply relative rounded-3xl border border-white/10 backdrop-blur-2xl;
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.02) 55%, rgba(255, 255, 255, 0.05) 100%);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.14),
       0 18px 44px rgba(0, 0, 0, 0.30);
+  }
+  /* Glass rim-light: the bright gradient lives ONLY on a 1px masked ring, so
+     the card interior stays dark glass — bright edge spots like the reference. */
+  .card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(150deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.14) 22%, rgba(255, 255, 255, 0.05) 55%, rgba(255, 255, 255, 0.38) 100%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
   }
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;
