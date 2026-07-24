@@ -91,7 +91,7 @@ export default function Reports() {
   return (
     <div className="space-y-6">
       <Heading
-        title="Reports & Daily Digest"
+        title="Reports"
         subtitle="The digest email goes out automatically every day at 6:00 PM (PKT) — you can also send or preview it now."
         action={
           <div className="flex flex-wrap gap-2">

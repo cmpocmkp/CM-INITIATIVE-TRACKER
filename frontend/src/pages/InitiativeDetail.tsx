@@ -40,7 +40,10 @@ export default function InitiativeDetail() {
       <div className="card overflow-hidden">
         <div className="border-b-4 border-navy-500 bg-white px-6 py-5">
           <div className="flex items-center gap-3">
-            <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-neutral-100 text-[24px] font-light leading-none text-neutral-800">
+            <span
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center border border-neutral-300 bg-transparent text-[32px] font-light leading-none text-neutral-900"
+              style={{ fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif" }}
+            >
               {i.number}
             </span>
             <div>

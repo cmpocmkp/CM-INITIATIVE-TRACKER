@@ -30,7 +30,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <Heading
-        title={staff ? "Provincial Dashboard" : `${d.department?.name ?? "Department"} Dashboard`}
+        title={staff ? "Overview" : `${d.department?.name ?? "Department"} — Overview`}
         subtitle={
           staff
             ? `CM's priority portfolio · live position as of ${d.today}`

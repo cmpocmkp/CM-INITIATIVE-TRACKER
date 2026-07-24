@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api, Scheme, fmtPct, fmtDate } from "../api";
 import { useAuth, isStaff } from "../auth";
-import { Heading, Spinner, ErrorBox, Bar, StageBadge } from "../ui";
+import { Heading, Spinner, ErrorBox, Bar, StageBadge, NumBox } from "../ui";
 
 export default function Schemes() {
   const { user } = useAuth();
@@ -74,10 +74,9 @@ export default function Schemes() {
           <table className="w-full" style={{ minWidth: 1000 }}>
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50">
-                <th className="th">#</th>
+                <th className="th">Initiative</th>
                 <th className="th">Scheme</th>
                 <th className="th">Sector / Dept</th>
-                <th className="th">Initiative</th>
                 <th className="th !text-right">Cost (M)</th>
                 <th className="th !text-right">Alloc (M)</th>
                 <th className="th !text-right">Spent (M)</th>
@@ -87,12 +86,24 @@ export default function Schemes() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((s, idx) => {
+              {filtered.map((s) => {
                 const u = s.updates?.[0];
                 const phys = s.effectivePhysical ?? u?.physicalProgressPct ?? null;
                 return (
                   <tr key={s.id} className="border-b border-slate-100 hover:bg-navy-50/40">
-                    <td className="td text-[12px] text-slate-400">{idx + 1}</td>
+                    <td className="td whitespace-nowrap">
+                      {s.initiative ? (
+                        <Link
+                          to={`/initiatives/${s.initiative.id}`}
+                          title={`#${s.initiative.number} ${s.initiative.shortName}`}
+                          className="inline-flex items-center gap-1.5 hover:opacity-70"
+                        >
+                          <NumBox n={s.initiative.number} size={22} />
+                        </Link>
+                      ) : (
+                        <span className="text-slate-300">—</span>
+                      )}
+                    </td>
                     <td className="td max-w-[360px]">
                       <Link to={`/schemes/${s.id}`} className="font-medium text-navy-800 hover:text-navy-600">
                         {s.adpCode && <span className="mr-1.5 text-[11px] text-slate-400">{s.adpCode}</span>}
@@ -106,15 +117,6 @@ export default function Schemes() {
                       )}
                     </td>
                     <td className="td whitespace-nowrap text-[12px]">{s.sector}</td>
-                    <td className="td whitespace-nowrap text-[12px]">
-                      {s.initiative ? (
-                        <Link to={`/initiatives/${s.initiative.id}`} className="text-navy-600 hover:underline">
-                          #{s.initiative.number} {s.initiative.shortName}
-                        </Link>
-                      ) : (
-                        <span className="text-slate-300">—</span>
-                      )}
-                    </td>
                     <td className="td whitespace-nowrap text-right">{s.totalCost?.toLocaleString() ?? "—"}</td>
                     <td className="td whitespace-nowrap text-right">{s.adpAllocation?.toLocaleString() ?? "—"}</td>
                     <td className="td whitespace-nowrap text-right">{u?.expenditure?.toLocaleString() ?? "—"}</td>

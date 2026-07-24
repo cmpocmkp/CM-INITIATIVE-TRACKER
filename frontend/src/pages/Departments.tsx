@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api";
 import { Heading, Spinner, ErrorBox } from "../ui";
 
@@ -13,6 +13,7 @@ interface Dept {
 }
 
 export default function Departments() {
+  const navigate = useNavigate();
   const [list, setList] = useState<Dept[] | null>(null);
   const [err, setErr] = useState("");
   const [q, setQ] = useState("");
@@ -31,28 +32,44 @@ export default function Departments() {
   return (
     <div className="space-y-4">
       <Heading
-        title="Departments / Sectors"
-        subtitle={`${list.length} departments — department and sector are one dimension. Each signs in with its code.`}
+        title="Department"
+        subtitle={`${list.length} departments — schemes grouped by the owning department. Each signs in with its code.`}
       />
       <input className="input max-w-xs" placeholder="Search department…" value={q} onChange={(e) => setQ(e.target.value)} />
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {filtered.map((d) => (
-          <Link key={d.id} to={`/departments/${d.id}`} className="card group flex items-center gap-4 p-4 transition hover:border-navy-300 hover:shadow-md">
-            <div className="flex h-11 w-14 shrink-0 items-center justify-center rounded-lg bg-navy-900 text-[11px] font-extrabold text-white">
-              {d.code}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-[13px] font-semibold text-navy-900 group-hover:text-navy-700">{d.name}</div>
-              <div className="mt-0.5 text-[11px] text-slate-500">
-                {d._count.schemes} scheme{d._count.schemes === 1 ? "" : "s"}
-                {d._count.ledInitiatives > 0 && <> · leads {d._count.ledInitiatives} initiative{d._count.ledInitiatives === 1 ? "" : "s"}</>}
-                {!d.isSector && <span className="ml-1 text-slate-400">(non-ADP)</span>}
-              </div>
-            </div>
-            <span className="text-slate-300 group-hover:text-navy-500">→</span>
-          </Link>
-        ))}
+      <div className="card overflow-hidden">
+        <div className="scroll-thin overflow-x-auto">
+          <table className="w-full" style={{ minWidth: 640 }}>
+            <thead>
+              <tr className="border-b border-neutral-200">
+                <th className="th">Code</th>
+                <th className="th">Department</th>
+                <th className="th !text-right">Schemes</th>
+                <th className="th !text-right">Leads Initiatives</th>
+                <th className="th">ADP</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((d) => (
+                <tr
+                  key={d.id}
+                  className="cursor-pointer border-b border-neutral-100 hover:bg-neutral-50"
+                  onClick={() => navigate(`/departments/${d.id}`)}
+                >
+                  <td className="td whitespace-nowrap text-[12px] text-neutral-500">{d.code}</td>
+                  <td className="td">
+                    <Link to={`/departments/${d.id}`} className="text-neutral-900 hover:underline">
+                      {d.name}
+                    </Link>
+                  </td>
+                  <td className="td text-right tabular-nums">{d._count.schemes || "—"}</td>
+                  <td className="td text-right tabular-nums">{d._count.ledInitiatives || "—"}</td>
+                  <td className="td text-[12px] text-neutral-400">{d.isSector ? "✓" : "non-ADP"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

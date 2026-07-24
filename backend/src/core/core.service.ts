@@ -113,7 +113,10 @@ export class CoreService {
     const dept = await this.prisma.department.findUnique({
       where: { id },
       include: {
-        schemes: { include: { ...this.latestInclude, initiative: true }, orderBy: { name: "asc" } },
+        schemes: {
+          include: { ...this.latestInclude, initiative: true },
+          orderBy: [{ initiative: { number: "asc" } }, { name: "asc" }] as Prisma.SchemeOrderByWithRelationInput[],
+        },
         ledInitiatives: { include: { updates: { orderBy: { reportDate: "desc" }, take: 1 } } },
       },
     });
@@ -122,6 +125,45 @@ export class CoreService {
       ...dept,
       schemes: dept.schemes.map((s) => ({ ...s, effectivePhysical: effectivePhysical(s) })),
     };
+  }
+
+  // ── Sectors (scheme.sector dimension — distinct from owning Department) ──
+  async sectorsList(user: SessionUser) {
+    const today = dateOnly();
+    const schemes = await this.prisma.scheme.findMany({
+      where: this.schemeScope(user),
+      include: this.latestInclude,
+    });
+    const by = new Map<string, { sector: string; count: number; cost: number; alloc: number; spent: number; physW: number; w: number; updatedToday: number }>();
+    for (const s of schemes) {
+      const rec = by.get(s.sector) ?? { sector: s.sector, count: 0, cost: 0, alloc: 0, spent: 0, physW: 0, w: 0, updatedToday: 0 };
+      rec.count++;
+      rec.cost += s.totalCost ?? 0;
+      rec.alloc += s.adpAllocation ?? 0;
+      rec.spent += s.updates[0]?.expenditure ?? 0;
+      const w = (s.totalCost ?? 0) > 0 ? (s.totalCost as number) : 1;
+      rec.w += w;
+      rec.physW += (effectivePhysical(s) ?? 0) * w;
+      if (schemeUpdatedToday(s, today)) rec.updatedToday++;
+      by.set(s.sector, rec);
+    }
+    return [...by.values()]
+      .map((r) => ({ sector: r.sector, count: r.count, cost: r.cost, alloc: r.alloc, spent: r.spent, avgPhysical: r.w ? r.physW / r.w : 0, updatedToday: r.updatedToday }))
+      .sort((a, b) => b.alloc - a.alloc);
+  }
+
+  async sectorDetail(user: SessionUser, name: string) {
+    const schemes = await this.prisma.scheme.findMany({
+      where: { AND: [this.schemeScope(user), { sector: name }] },
+      include: {
+        ...this.latestInclude,
+        department: { select: { id: true, name: true, code: true } },
+        initiative: { select: { id: true, number: true, shortName: true } },
+      },
+      orderBy: [{ initiative: { number: "asc" } }, { name: "asc" }],
+    });
+    if (!schemes.length) throw new NotFoundException(`No schemes in sector "${name}"`);
+    return { sector: name, schemes: schemes.map((s) => ({ ...s, effectivePhysical: effectivePhysical(s) })) };
   }
 
   async initiatives(user: SessionUser) {
@@ -217,7 +259,7 @@ export class CoreService {
         department: { select: { id: true, name: true, code: true } },
         initiative: { select: { id: true, number: true, shortName: true } },
       },
-      orderBy: [{ sector: "asc" }, { name: "asc" }],
+      orderBy: [{ initiative: { number: "asc" } }, { name: "asc" }],
     });
     return list.map((s) => ({ ...s, effectivePhysical: effectivePhysical(s) }));
   }
@@ -330,7 +372,7 @@ export class CoreService {
         initiative: { select: { id: true, number: true, shortName: true } },
         subProjects: { orderBy: { createdAt: "asc" } },
       },
-      orderBy: [{ sector: "asc" }, { name: "asc" }],
+      orderBy: [{ initiative: { number: "asc" } }, { name: "asc" }],
     });
     // Led initiatives — include ALL their schemes (any dept) so the row can be
     // auto-computed instead of asking the lead dept to type the same data twice.

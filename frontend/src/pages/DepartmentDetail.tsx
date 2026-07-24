@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, Scheme, Update, fmtM, fmtPct, fmtDate } from "../api";
-import { Heading, Spinner, ErrorBox, Bar, StageBadge, Kpi } from "../ui";
+import { Heading, Spinner, ErrorBox, Bar, StageBadge, Kpi, NumBox } from "../ui";
 
 interface DeptDetail {
   id: string;
@@ -61,8 +61,8 @@ export default function DepartmentDetail() {
           <table className="w-full" style={{ minWidth: 900 }}>
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50">
-                <th className="th">Scheme</th>
                 <th className="th">Initiative</th>
+                <th className="th">Scheme</th>
                 <th className="th !text-right">Cost (M)</th>
                 <th className="th !text-right">Alloc (M)</th>
                 <th className="th !text-right">Spent (M)</th>
@@ -77,14 +77,14 @@ export default function DepartmentDetail() {
                 const phys = s.effectivePhysical ?? u?.physicalProgressPct ?? null;
                 return (
                   <tr key={s.id} className="border-b border-slate-100 hover:bg-navy-50/40">
+                    <td className="td whitespace-nowrap">
+                      {s.initiative ? <NumBox n={s.initiative.number} size={22} /> : <span className="text-slate-300">—</span>}
+                    </td>
                     <td className="td max-w-[360px]">
                       <Link to={`/schemes/${s.id}`} className="font-medium text-navy-800 hover:text-navy-600">
                         {s.adpCode && <span className="mr-1.5 text-[11px] text-slate-400">{s.adpCode}</span>}
                         {s.name}
                       </Link>
-                    </td>
-                    <td className="td whitespace-nowrap text-[12px]">
-                      {s.initiative ? `#${s.initiative.number}` : "—"}
                     </td>
                     <td className="td whitespace-nowrap text-right">{s.totalCost?.toLocaleString() ?? "—"}</td>
                     <td className="td whitespace-nowrap text-right">{s.adpAllocation?.toLocaleString() ?? "—"}</td>

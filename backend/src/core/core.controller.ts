@@ -47,6 +47,17 @@ export class CoreController {
     return this.core.schemeDetail(user, id);
   }
 
+  // ── Sectors (independent dimension from departments) ──────
+  @Get("sectors")
+  sectors(@CurrentUser() user: SessionUser) {
+    return this.core.sectorsList(user);
+  }
+
+  @Get("sectors/:name")
+  sector(@CurrentUser() user: SessionUser, @Param("name") name: string) {
+    return this.core.sectorDetail(user, decodeURIComponent(name));
+  }
+
   @Patch("schemes/:id/stage")
   setStage(
     @CurrentUser() user: SessionUser,

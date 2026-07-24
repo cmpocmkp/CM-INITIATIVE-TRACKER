@@ -68,12 +68,18 @@ export function Delta({ value }: { value: string | null }) {
   );
 }
 
-/** Apple-style rounded square (continuous-corner look) holding a number that fills it. */
-export function NumBox({ n, size = 28 }: { n: number; size?: number }) {
+/** Bare square: no fill, hairline outline, Helvetica digit expanded to fill the box. */
+export function NumBox({ n, size = 30 }: { n: number; size?: number }) {
   return (
     <span
-      className="inline-flex shrink-0 items-center justify-center bg-neutral-100 font-light leading-none text-neutral-800"
-      style={{ width: size, height: size, fontSize: Math.round(size * 0.58), borderRadius: Math.round(size * 0.28) }}
+      className="inline-flex shrink-0 items-center justify-center border border-neutral-300 bg-transparent font-light leading-none text-neutral-900"
+      style={{
+        width: size,
+        height: size,
+        borderRadius: Math.max(4, Math.round(size * 0.22)),
+        fontSize: Math.round(size * 0.72),
+        fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+      }}
     >
       {n}
     </span>
